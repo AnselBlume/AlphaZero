@@ -37,21 +37,6 @@ class TestState(unittest.TestCase):
 
         self.assertEqual(index, expected)
 
-    def test_square_to_n_n(self):
-        # Test 1
-        square = chess.parse_square('a1')
-        n_n = self.encoder.square_to_n_n(square)
-        expected = (7, 0)
-
-        self.assertEqual(n_n, expected)
-
-        # Test 2
-        square = chess.parse_square('g3')
-        n_n = self.encoder.square_to_n_n(square)
-        expected = (5, 6)
-
-        self.assertEqual(n_n, expected)
-
     def test_encode_state(self):
         M, N = encode_state.M, encode_state.N
         T = self.encoder.T

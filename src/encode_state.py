@@ -1,5 +1,6 @@
 import torch
 import chess
+from utils import square_to_n_n
 # Pages 12-15 of paper https://arxiv.org/pdf/1712.01815.pdf are most relevant
 N = 8 # Board dimensions
 M = 14 # 6 p1 pieces, 6 p2 pieces, 2 repetition counts
@@ -28,15 +29,6 @@ class StateEncoder:
         offset = 0 if piece.color == board.turn else 6
         return offset + piece.piece_type - 1
 
-    def square_to_n_n(self, square):
-        '''
-            Returns the indices in the N x N board corresponding to square.
-        '''
-        rank = chess.square_rank(square)
-        file = chess.square_file(square)
-
-        return N - (rank + 1), file
-
     def encode_state(self, board, prev_state):
         '''
             Returns the input tensor to be processed by AlphaZero.
@@ -51,7 +43,7 @@ class StateEncoder:
         t_offset = M*(T-1)
         for square, piece in board.piece_map().items():
             piece_ind = self.piece_to_index(piece, board)
-            row, col = self.square_to_n_n(square)
+            row, col = square_to_n_n(square)
             state[t_offset + piece_ind, row, col] = 1
 
         # TODO Potentially encode repeat count for both players
