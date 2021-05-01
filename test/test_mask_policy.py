@@ -8,7 +8,7 @@ import torch
 import constants as consts
 import utils
 
-class TestMask(unittest.TestCase):
+class TestMaskPolicy(unittest.TestCase):
     def test_build_legal_move_dict(self):
         # https://lichess.org/editor/8/2k5/8/8/8/8/1K3p2/8_b_-_-_0_1
         board = chess.Board('8/2k5/8/8/8/8/1K3p2/8 b - - 0 1')

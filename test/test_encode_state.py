@@ -7,7 +7,7 @@ from encode_state import StateEncoder
 import chess
 import torch
 
-class TestState(unittest.TestCase):
+class TestEncodeState(unittest.TestCase):
     def setUp(self):
         self.encoder = StateEncoder(T=2)
 
