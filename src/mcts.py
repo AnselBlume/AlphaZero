@@ -63,13 +63,28 @@ class MCTSEvaluator:
             node_or_edge.backup_update(value)
 
     def rollout(self, to_rollout):
+        # Attempt to trim the rollout subtree at the highest possible point
+        # May not be possible to trim as the rollout subtree could have already been
+        # created as the MCTS is not a true tree (it's a DAG)
+        to_unexpand = None
+
         curr = to_rollout
         while not curr.is_terminal():
-            curr.expand() # No need to compute prior for state value evaluation
+            if not curr.was_expanded():
+                # Find the highest node to trim the rollout subtree from
+                if to_unexpand is None:
+                    to_unexpand = curr
+
+                curr.expand(is_rollout=True) # No need to compute prior for state value evaluation
+
             curr = curr.get_random_edge().to_node
 
         value = self.get_terminal_value(curr)
-        to_rollout.unexpand() # No need to keep subtree in memory
+
+        # If the nodes were already expanded before the rollout, don't unexpand them
+        # Otherwise, can let go of the rollout subtree
+        if to_unexpand is not None:
+            to_unexpand.unexpand()
 
         return value
 

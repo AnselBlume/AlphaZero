@@ -28,7 +28,7 @@ if __name__ == '__main__':
     # https://lichess.org/editor/8/8/p5r1/1p6/1P1R4/8/5K1p/7k_w_-_-_0_1
     board_fen = '8/8/p5r1/1p6/1P1R4/8/5K1p/7k w - - 0 1'
     eval = MCTSEvaluator(board_fen, prior_func)
-    root = eval.mcts(50)
+    root = eval.mcts(trials=500)
 
     # Starting position
     '''

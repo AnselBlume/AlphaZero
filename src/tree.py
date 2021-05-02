@@ -5,13 +5,24 @@ import logging
 logger = logging.getLogger(__name__)
 
 class TreeNode:
-    def __init__(self, fen, fen_to_node):
+    def __init__(self, fen, fen_to_node, is_rollout=False):
+        '''
+            fen_to_node is a dictionary mapping FENs to TreeNodes so that
+            we can reuse TreeNode statistics if multiple paths lead to the same
+            TreeNode state (as the graph is a DAG, not a directed tree).
+
+            If is_rollout, that means this node was created during a rollout and
+            shouldn't be added to the fen index (as it is temporary). All expanded
+            children will also have is_rollout set to true and not be added to the dict.
+        '''
         self.fen = fen
         self.out_edges = []
         self.outcome = chess.Board(self.fen).outcome()
 
-        # Add self to node index
-        fen_to_node[fen] = self
+        # Add self to node index if not created from a rollout
+        if not is_rollout:
+            fen_to_node[fen] = self
+        self.is_rollout = is_rollout
         self.fen_to_node = fen_to_node
 
         # Not technically needed but nice to compute state value
@@ -21,14 +32,32 @@ class TreeNode:
     def is_terminal(self):
         return self.outcome is not None
 
-    def expand(self, prior_func=None):
+    def was_expanded(self):
+        return self.is_terminal() and self.is_leaf() \
+               or not self.is_terminal() and not self.is_leaf()
+
+    def expand(self, prior_func=None, is_rollout=False):
         '''
             prior_func should take a chess.Move and return the prior probability
             for the move.
 
-            If prior_func is None the prior will be set to zero (for faster
+            If prior_func is None or is_rollout the prior will be set to zero (for faster
             evaluation during rollouts which don't compute the UCB).
+
+            If is_rollout, nodes created during the expansion won't be added to
+            the fen dictionary and no nodes will be retrieved from the fen dictionary
+            to prevent modification of the tree.
         '''
+        assert not self.was_expanded()
+
+        # If this node was created in a rollout, doesn't matter what the user inputs
+        # for is_rollout; we're still in a rollout
+        is_rollout = is_rollout or self.is_rollout
+
+        # No need to compute prior if in a rollout
+        if prior_func is None or is_rollout:
+            prior_func = lambda x: 0
+
         # For each action, create a child node
         board = chess.Board(self.fen)
         for move in board.legal_moves:
@@ -36,13 +65,14 @@ class TreeNode:
             board.push(move)
             child_fen = board.fen()
 
-            if child_fen in self.fen_to_node:
+            # If we're in a rollout,
+            if not is_rollout and child_fen in self.fen_to_node:
                 child_state = self.fen_to_node[child_fen]
             else:
-                child_state = TreeNode(child_fen, self.fen_to_node)
+                child_state = TreeNode(child_fen, self.fen_to_node, is_rollout=is_rollout)
 
             # Add an edge to the new state to this node
-            prior = prior_func(move) if prior_func is not None else 0
+            prior = prior_func(move)
             out_edge = TreeEdge(
                 move.uci(),
                 prior,
@@ -52,6 +82,8 @@ class TreeNode:
             self.out_edges.append(out_edge)
 
             board.pop() # Reset state to expand more moves
+
+        assert len(self.out_edges) > 0
 
     def unexpand(self):
         self.out_edges = []
