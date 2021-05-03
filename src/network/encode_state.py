@@ -21,6 +21,26 @@ class StateEncoder:
     def __init__(self, T=2):
         self.T = T # Length of history
 
+    def get_first_state(self, board):
+        '''
+            Returns the state given by the board with no history.
+        '''
+        empty_state = self.get_empty_state()
+        start_state = self.encode_state(board, empty_state)
+
+        return start_state
+
+    def encode_state_with_history(self, boards):
+        '''
+            Returns a state encoding of the final board in boards with
+            a history from the previous boards in the iterable of length T - 1.
+        '''
+        curr_state = self.get_empty_state()
+        for board in boards:
+            curr_state = self.encode_state(board, curr_state)
+
+        return curr_state
+
     def piece_to_index(self, piece, board):
         '''
             Returns index of the piece in the M array (not accounting for T offset).
