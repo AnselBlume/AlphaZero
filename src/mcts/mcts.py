@@ -1,6 +1,7 @@
 import chess
 from .tree import TreeNode
 import logging
+from time import time
 
 logger = logging.getLogger(__name__)
 
@@ -14,14 +15,23 @@ class MCTSEvaluator:
         self.curr_player = chess.Board(root_fen).turn # For terminal state eval
         self.prior_func_builder = prior_func_builder
 
-    def mcts(self, std_ucb=False, trials=50):
+    def mcts(self, std_ucb=False, max_trials=50, max_time_s=-1):
         fen_to_node = {} # Index of all TreeNodes
         root = TreeNode(self.root_fen, fen_to_node)
         root.expand(self.prior_func_builder([]))
 
-        for i in range(trials):
+        start_time = time()
+        out_of_time = False
+
+        i = 0
+        while i < max_trials and not out_of_time:
             logger.info(f'Trial {i}')
             self.evaluate(root, fen_to_node, i if std_ucb else None)
+            i += 1
+
+            if max_time_s > 0 and time() - start_time > max_time_s:
+                out_of_time = True
+                logger.info(f'Out of time for MCTS evaluation')
 
         return root
 
