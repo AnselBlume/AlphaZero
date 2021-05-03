@@ -19,7 +19,7 @@ class TestNetwork(unittest.TestCase):
             out = net(curr_state)
 
             self.assertEqual(out[0].shape, torch.Size([1]))
-            self.assertEqual(out[1].shape, torch.Size((1, 8,8,73)))
+            self.assertEqual(out[1].shape, torch.Size((1,8,8,73)))
 
         test_correct_shape(1)
         test_correct_shape(2)
