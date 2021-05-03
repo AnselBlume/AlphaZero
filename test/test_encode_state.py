@@ -2,8 +2,8 @@ import unittest
 import os
 import sys
 sys.path.insert(1, os.path.realpath('../src'))
-import encode_state
-from encode_state import StateEncoder
+import network.encode_state as encode_state
+from network.encode_state import StateEncoder
 import chess
 import torch
 

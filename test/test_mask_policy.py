@@ -2,7 +2,7 @@ import unittest
 import os
 import sys
 sys.path.insert(1, os.path.realpath('../src'))
-from mask_policy import *
+from network.mask_policy import *
 import chess
 import torch
 import constants as consts

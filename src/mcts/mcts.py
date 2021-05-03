@@ -1,5 +1,5 @@
 import chess
-from tree import TreeNode
+from .tree import TreeNode
 import logging
 
 logger = logging.getLogger(__name__)
