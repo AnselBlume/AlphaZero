@@ -21,15 +21,6 @@ class StateEncoder:
     def __init__(self, T=2):
         self.T = T # Length of history
 
-    def get_first_state(self, board):
-        '''
-            Returns the state given by the board with no history.
-        '''
-        empty_state = self.get_empty_state()
-        start_state = self.encode_state(board, empty_state)
-
-        return start_state
-
     def encode_state_with_history(self, boards):
         '''
             Returns a state encoding of the final board in boards with

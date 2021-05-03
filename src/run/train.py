@@ -60,6 +60,8 @@ def train(T, device='cpu', num_games=10, chkpt_path=None, start_fen=START_FEN,
         if game_num == 1 or game_num % 5 == 0:
             save_state(net, optimizer, games_trained, replay_mem, CHKPT_NUM_FMT % game_num)
 
+    return net
+
 def save_state(net, optimizer, games_trained, replay_mem, chkpt_path):
     if not os.path.exists(CHECKPOINT_DIR):
         os.mkdir(CHECKPOINT_DIR)
