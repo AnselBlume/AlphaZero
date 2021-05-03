@@ -26,7 +26,7 @@ class MCTSPolicyEncoder:
         for move in mcts_dist.move_data:
             row, col = square_to_n_n(move.from_square)
             index = square_move_to_index(move.from_square, move.to_square, move.promotion)
-            score = move.get_score(self.temp)
+            score = move.visits ** self.temp
 
             policy[row,col,index] = score
 
@@ -41,6 +41,3 @@ class MoveData:
         self.to_square = move.to_square
         self.promotion = move.promotion
         self.visits = tree_edge.visits
-
-    def get_score(self, temp=1):
-        return self.visits ** temp
