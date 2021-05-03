@@ -2,6 +2,18 @@ import torch
 import torch.nn as nn
 from torch.nn import functional as F
 
+def to_probabilities(policy_logits, temp=2):
+    '''
+        policy_logits is a tensor of shape (batch_size, 8, 8, 73)
+    '''
+    orig_shape = policy_logits.shape
+    policy_logits = torch.exp(policy_logits / temp)
+    policy_logits = policy_logits.reshape(policy_logits.shape[0], -1)
+    policy_probs = policy_logits / policy_logits.sum(dim=1, keepdim=True)
+    policy_probs = policy_probs.reshape(orig_shape)
+
+    return policy_probs
+
 class ResidualBlock(nn.Module):
     def __init__(self, in_channels, out_channels):
         super().__init__()

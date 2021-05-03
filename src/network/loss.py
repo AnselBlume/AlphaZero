@@ -1,5 +1,6 @@
 from .encode_dist import MCTSPolicyEncoder
 from .encode_state import StateEncoder
+from .network import to_probabilities
 import chess
 import torch.nn.functional as F
 
@@ -24,13 +25,7 @@ class MCTSLoss:
         ]
         encodings = torch.stack(encodings, dim=0)
         net_vals, net_policies = network(encodings)
-
-        # Normalize network policies to probabilities
-        orig_shape = net_policies.shape
-        net_policies = torch.exp(net_policies / self.temp)
-        net_policies = net_policies.reshape(net_policies.shape[0], -1)
-        net_policies /= net_policies.sum(dim=1, keepdim=True)
-        net_policies.reshape(net_policies)
+        net_policies = to_probabilities(net_policies)
 
         # Compute mcts outputs
         mcts_vals = []
@@ -56,15 +51,11 @@ class MCTSLoss:
         # Let the optimizer handle l2 regularization
 
         return mse + ce
-        
+
     def _build_final_state_encoding(self, mcts_dists):
         '''
             Builds the final state encoding from a list of MCTSDists representing
             a series of states.
         '''
-        state = self.state_encoder.get_empty_state()
-        for mcts_dist in mcts_dists:
-            board = chess.Board(mcts_dist.fen)
-            state = self.state_encoder.encode_state(board, state)
-
-        return state
+        boards = (chess.Board(mcts_dist.fen) for mcts_dist in mcts_dists)
+        return self.state_encoder.encode_state_with_history(boards)
