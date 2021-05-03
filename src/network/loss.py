@@ -1,13 +1,12 @@
 from .encode_dist import MCTSPolicyEncoder
 from .encode_state import StateEncoder
-from .network import to_probabilities
 import chess
 import torch.nn.functional as F
 import torch
 
 class MCTSLoss:
     def __init__(self, T, temp=2, device='cpu'):
-        self.temp = 2
+        self.temp = temp
         self.mcts_policy_encoder = MCTSPolicyEncoder(temp=temp)
         self.state_encoder = StateEncoder(T)
         self.device = device

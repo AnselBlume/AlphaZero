@@ -3,17 +3,6 @@ import torch.nn as nn
 from torch.nn import functional as F
 from network.encode_state import M, L
 
-def to_probabilities(policy_logits, temp=2):
-    '''
-        policy_logits is a tensor of shape (batch_size, 8, 8, 73)
-    '''
-    orig_shape = policy_logits.shape
-    policy_logits = policy_logits.reshape(policy_logits.shape[0], -1)
-    policy_probs = F.softmax(policy_logits, dim=1)
-    policy_probs = policy_probs.reshape(orig_shape)
-
-    return policy_probs
-
 class ResidualBlock(nn.Module):
     def __init__(self, in_channels, out_channels):
         super().__init__()
@@ -29,12 +18,13 @@ class ResidualBlock(nn.Module):
         return Y
 
 class Network(nn.Module):
-    def __init__(self, T, n_res_blocks=19, n_filters=256,
+    def __init__(self, T, temp=2, n_res_blocks=19, n_filters=256,
                  compress_filters=100):
         super().__init__()
 
+        self.temp = temp
+        
         in_channels = M * T + L
-
         self.conv = nn.Conv2d(in_channels, n_filters, 3, padding=1) # (256,8,8)
         self.tower = nn.Sequential(*[
             ResidualBlock(n_filters, n_filters) for _ in range(n_res_blocks)
@@ -53,6 +43,7 @@ class Network(nn.Module):
         flattened = compressed.reshape(X.shape[0], -1)
 
         value = torch.tanh(self.value_head(flattened))
-        policy = F.log_softmax(self.policy_head(flattened), dim=1).reshape(-1, 8, 8, 73)
+        policy = F.log_softmax(self.policy_head(flattened) / self.temp, dim=1) \
+                  .reshape(-1, 8, 8, 73)
 
         return value, policy

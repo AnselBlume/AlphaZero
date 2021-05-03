@@ -1,12 +1,13 @@
 import torch
 from network.encode_state import StateEncoder
 from network.mask_policy import mask_invalid_moves, square_move_to_index
-from network.network import Network, to_probabilities
+from network.network import Network
 from network.encode_dist import MCTSDist
 import network.sample_policy
 import chess
 from mcts.mcts import MCTSEvaluator
 from utils import square_to_n_n
+from torch.nn import functional as F
 import logging
 
 logger = logging.getLogger(__name__)
@@ -70,8 +71,12 @@ class GameRunner:
 
     def _sample_move(self, root):
         visits = torch.tensor([edge.n_visits for edge in root.out_edges])
-        visits = visits ** (1 / self.temp)
-        visits /= visits.sum()
+
+        # In the same way as in MCTSPolicyEncoder, perform softmax over visits
+        # as opposed to this harder version used in the original paper
+        #visits = visits ** (1 / self.temp) # Original AlphaZero probability
+        #visits /= visits.sum() # Original AlphaZero formulation
+        visits = F.softmax(visits / self.temp, dim=0)
 
         sampled_ind = torch.multinomial(visits, 1).item()
         sampled_edge = root.out_edges[sampled_ind]

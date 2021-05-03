@@ -2,6 +2,7 @@ from .mask_policy import square_move_to_index
 from utils import square_to_n_n
 import chess
 import torch
+from torch.nn import functional as F
 
 class MCTSDist:
     '''
@@ -27,11 +28,17 @@ class MCTSPolicyEncoder:
         for move in mcts_dist.move_data:
             row, col = square_to_n_n(move.from_square)
             index = square_move_to_index(move.from_square, move.to_square, move.promotion)
-            score = move.n_visits ** (1 / self.temp)
+            # Since MCTS is very expensive on a single core machine, use softmax instead
+            # of hard probabilities which are frequently zero as n_visits are sparse
+            score = move.n_visits
+            # score = move.n_visits ** (1 / self.temp) # Original AlphaZero score
 
             policy[row,col,index] = score
 
-        policy /= policy.sum()
+        policy = F.softmax(policy.flatten() / self.temp, dim=0) # Softer distribution than original AlphaZero
+        policy = policy.reshape(8,8,73)
+        # policy /= policy.sum() # Original AlphaZero normalization
+
         return policy
 
 class MoveData:
