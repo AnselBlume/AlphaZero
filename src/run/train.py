@@ -47,14 +47,14 @@ def train(T, device='cpu', num_games=10, chkpt_path=None, start_fen=START_FEN,
         optimizer.zero_grad()
         loss = mcts_loss.get_loss(net, mcts_dist_histories)
         loss.backward()
+        optimizer.step()
+
+        games_trained += 1
         wandb.log({
             'Loss' : loss.item(),
             'Games trained' : games_trained
         })
-        optimizer.step()
-
         logger.info(f'Saving updated network')
-        games_trained += 1
         save_state(net, optimizer, games_trained, replay_mem, LATEST_CHKPT_PATH)
 
         if game_num == 1 or game_num % 5 == 0:
