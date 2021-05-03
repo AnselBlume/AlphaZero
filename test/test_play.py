@@ -5,9 +5,9 @@ from play import GameRunner
 from network.network import Network
 import coloredlogs
 coloredlogs.install(level='INFO', fmt='%(asctime)s %(name)s %(levelname)s %(message)s')
-from network.encode_state import M, L
 
 if __name__ == '__main__':
-    net = Network(1)
-    game_runner = GameRunner(1)
-    game_runner.play_game(net)
+    device = 'cpu'
+    net = Network(1).to(device)
+    game_runner = GameRunner(1, device=device)
+    board, mcts_dists_histories = game_runner.play_game(net)

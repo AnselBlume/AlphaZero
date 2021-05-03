@@ -12,23 +12,27 @@ import logging
 logger = logging.getLogger(__name__)
 
 class GameRunner:
-    def __init__(self, T, temp=2, std_ucb=False, max_trials=500, max_time_s=10):
+    def __init__(self, T, temp=2, std_ucb=False, max_trials=500, max_time_s=10,
+                 device='cpu'):
         self.T = T
         self.temp = temp
         self.std_ucb = std_ucb
         self.max_trials = max_trials
         self.max_time_s = max_time_s
         self.state_encoder = StateEncoder(T)
+        self.device = device
 
     def play_game(self, network):
         board = chess.Board()
         fen_history = [] # Could use a deque here
 
         mcts_dists = []
+        logger.info(f'Current FEN: {board.fen()}')
         while board.outcome() is None:
             mcts_dist = self.play_turn(board, network, fen_history[-self.T:])
             mcts_dists.append(mcts_dist)
             fen_history.append(board.fen())
+            logger.info(f'Current FEN: {board.fen()}')
 
         # Build mcts_dist_histories
         if self.T > len(mcts_dists):
@@ -84,10 +88,11 @@ class GameRunner:
             boards = (chess.Board(fen) for fen in fens[-self.T:])
             curr_state = self.state_encoder.encode_state_with_history(boards)
             with torch.no_grad():
-                _, net_logits = network(curr_state.unsqueeze(0))
+                curr_state = curr_state.unsqueeze(0).to(self.device)
+                _, net_logits = network(curr_state)
 
             net_policy = to_probabilities(net_logits).squeeze()
-            mask_invalid_moves(net_policy, chess.Board(fens[-1]))
+            mask_invalid_moves(net_policy, chess.Board(fens[-1]), device=self.device)
 
             def prior_func(move):
                 row, col = square_to_n_n(move.from_square)

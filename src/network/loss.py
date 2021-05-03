@@ -5,10 +5,11 @@ import chess
 import torch.nn.functional as F
 
 class MCTSLoss:
-    def __init__(self, T, temp=2):
+    def __init__(self, T, temp=2, device='cpu'):
         self.temp = 2
         self.mcts_policy_encoder = MCTSPolicyEncoder(temp=temp)
         self.state_encoder = StateEncoder(T)
+        self.device = device
 
     def get_loss(network, mcts_dist_histories):
         '''
@@ -39,8 +40,8 @@ class MCTSLoss:
             mcts_vals.append(mcts_val)
             mcts_policies.append(mcts_policy)
 
-        mcts_vals = torch.tensor(mcts_vals)
-        mcts_policies = torch.stack(mcts_policies, dim=0)
+        mcts_vals = torch.tensor(mcts_vals).to(device)
+        mcts_policies = torch.stack(mcts_policies, dim=0).to(device)
 
         assert mcts_vals.shape == net_vals.shape
         assert mcts_policies.shape == net_policies.shape

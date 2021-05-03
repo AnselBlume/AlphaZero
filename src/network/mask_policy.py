@@ -122,8 +122,8 @@ def square_move_to_index(from_square, to_square, promotion=None):
     else:
         raise RuntimeError('The promotion target is invalid')
 
-def mask_position(row, col, policy, legal_move_dict):
-    mask = torch.zeros(73)
+def mask_position(row, col, policy, legal_move_dict, device):
+    mask = torch.zeros(73).to(device)
 
     from_square = n_n_to_square(row, col)
 
@@ -136,11 +136,11 @@ def mask_position(row, col, policy, legal_move_dict):
 
     policy[row,col,:] *= mask
 
-def mask_invalid_moves(policy, board):
+def mask_invalid_moves(policy, board, device='cpu'):
     legal_move_dict = build_legal_move_dict(board)
 
     for row in range(policy.shape[0]):
         for col in range(policy.shape[1]):
-            mask_position(row, col, policy, legal_move_dict)
+            mask_position(row, col, policy, legal_move_dict, device)
 
     policy /= policy.sum() # Renormalize to 1
