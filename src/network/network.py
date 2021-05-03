@@ -22,8 +22,9 @@ class Network(nn.Module):
                  compress_filters=100):
         super().__init__()
 
+        self.T = T
         self.temp = temp
-        
+
         in_channels = M * T + L
         self.conv = nn.Conv2d(in_channels, n_filters, 3, padding=1) # (256,8,8)
         self.tower = nn.Sequential(*[

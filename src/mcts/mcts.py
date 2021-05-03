@@ -15,7 +15,11 @@ class MCTSEvaluator:
         self.curr_player = chess.Board(root_fen).turn # For terminal state eval
         self.prior_func_builder = prior_func_builder
 
-    def mcts(self, std_ucb=False, max_trials=50, max_time_s=-1):
+    def mcts(self, std_ucb=True, max_trials=500, max_time_s=-1):
+        '''
+            max_time_s < 0 indicates all the time necessary to finish
+            max_trials.
+        '''
         logger.debug(f'Starting MCTS in state {self.root_fen}')
         fen_to_node = {} # Index of all TreeNodes
         root = TreeNode(self.root_fen, fen_to_node)
