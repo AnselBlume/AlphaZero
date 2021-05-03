@@ -8,15 +8,16 @@ logger = logging.getLogger(__name__)
 # https://www.youtube.com/watch?v=UXW2yZndl7U
 
 class MCTSEvaluator:
-    def __init__(self, root_fen, prior_func):
+    def __init__(self, root_fen, prior_func_builder):
+        # TODO take in fen history of root_fen to pass into prior_func_builder
         self.root_fen = root_fen
         self.curr_player = chess.Board(root_fen).turn # For terminal state eval
-        self.prior_func = prior_func
+        self.prior_func_builder = prior_func_builder
 
     def mcts(self, std_ucb=False, trials=50):
         fen_to_node = {} # Index of all TreeNodes
         root = TreeNode(self.root_fen, fen_to_node)
-        root.expand(self.prior_func)
+        root.expand(self.prior_func_builder([]))
 
         for i in range(trials):
             logger.info(f'Trial {i}')
@@ -28,6 +29,7 @@ class MCTSEvaluator:
         # Path will contain nodes and edges so we can update state values
         # though we technically only care about action values
         path = [root]
+        fen_path = [root.fen] # Keep track of just node path to compute priors
 
         # Descend until we find a leaf (a node which hasn't been expanded)
         curr = root
@@ -39,12 +41,13 @@ class MCTSEvaluator:
 
             path.append(edge)
             path.append(curr)
+            fen_path.append(curr.fen)
 
         if curr.is_terminal():
             value = self.get_terminal_value(curr)
         else:
             if curr.n_visits > 0:
-                curr.expand(self.prior_func)
+                curr.expand(self.prior_func_builder(fen_path))
 
                 edge = curr.get_edge_to_explore(trials_so_far)
                 curr = edge.to_node
@@ -53,6 +56,7 @@ class MCTSEvaluator:
 
                 path.append(edge)
                 path.append(curr)
+                fen_path.append(curr)
 
             value = self.rollout(curr)
 

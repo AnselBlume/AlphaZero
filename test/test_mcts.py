@@ -10,7 +10,7 @@ coloredlogs.install(level='INFO', fmt='%(asctime)s %(name)s %(levelname)s %(mess
 
 if __name__ == '__main__':
 
-    prior_func = lambda x: .5
+    prior_func_builder = lambda l: lambda m: .5
 
     # Black checkmates white on white turn; should return -1
     # https://lichess.org/editor/8/8/8/8/8/8/5kq1/7K_w_-_-_0_1

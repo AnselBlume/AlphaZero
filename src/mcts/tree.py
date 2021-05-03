@@ -38,8 +38,8 @@ class TreeNode:
 
     def expand(self, prior_func=None, is_rollout=False):
         '''
-            prior_func should take a chess.Move and return the prior probability
-            for the move.
+            prior_func should take a chess.Move prior probability of selecting
+            the move in the state given by this node.
 
             If prior_func is None or is_rollout the prior will be set to zero (for faster
             evaluation during rollouts which don't compute the UCB).
@@ -56,7 +56,7 @@ class TreeNode:
 
         # No need to compute prior if in a rollout
         if prior_func is None or is_rollout:
-            prior_func = lambda x: 0
+            prior_func = lambda m: 0
 
         # For each action, create a child node
         board = chess.Board(self.fen)
