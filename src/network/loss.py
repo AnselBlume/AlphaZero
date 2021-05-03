@@ -30,8 +30,7 @@ class MCTSLoss:
             for mcts_dists in mcts_dist_histories
         ]
         encodings = torch.stack(encodings, dim=0).to(self.device)
-        net_vals, net_policies = network(encodings)
-        net_policies = to_probabilities(net_policies)
+        net_vals, net_log_probs = network(encodings)
 
         # Compute mcts outputs
         mcts_vals = []
@@ -49,10 +48,13 @@ class MCTSLoss:
         mcts_policies = torch.stack(mcts_policies, dim=0).to(self.device)
 
         assert mcts_vals.shape == net_vals.shape
-        assert mcts_policies.shape == net_policies.shape
+        assert mcts_policies.shape == net_log_probs.shape
 
         mse = F.mse_loss(net_vals, mcts_vals)
-        ce = -(mcts_policies * net_policies.log()).sum() / len(mcts_dist_histories)
+        ce = -(mcts_policies * net_log_probs).sum() / len(mcts_dist_histories)
+
+        assert not torch.isnan(mse).any() and not torch.isinf(mse).any()
+        assert not torch.isnan(ce).any() and not torch.isinf(ce).any()
 
         # Let the optimizer handle l2 regularization
 

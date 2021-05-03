@@ -53,6 +53,6 @@ class Network(nn.Module):
         flattened = compressed.reshape(X.shape[0], -1)
 
         value = torch.tanh(self.value_head(flattened))
-        policy = self.policy_head(flattened).reshape(-1, 8, 8, 73)
+        policy = F.log_softmax(self.policy_head(flattened), dim=1).reshape(-1, 8, 8, 73)
 
         return value, policy

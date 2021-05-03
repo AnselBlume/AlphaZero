@@ -21,11 +21,12 @@ CHECKPOINT_DIR = 'checkpoints'
 LATEST_CHKPT_PATH = 'latest_chkpt.tar'
 CHKPT_NUM_FMT = 'chkpt_%d.tar'
 
-def train(T, device='cpu', num_games=10, chkpt_path=None, start_fen=START_FEN):
+def train(T, device='cpu', num_games=10, chkpt_path=None, start_fen=START_FEN,
+          max_time_s=30):
     net, optimizer, games_trained, replay_mem = load_state(T, chkpt_path, device)
     wandb.watch(net, log_freq=50)
 
-    game_runner = GameRunner(T, device=device)
+    game_runner = GameRunner(T, device=device, max_time_s=max_time_s)
     mcts_loss = MCTSLoss(T, device=device)
 
     for game_num in range(games_trained + 1, num_games + games_trained + 1):

@@ -16,7 +16,7 @@ class MCTSEvaluator:
         self.prior_func_builder = prior_func_builder
 
     def mcts(self, std_ucb=False, max_trials=50, max_time_s=-1):
-        logger.info(f'Starting MCTS in state {self.root_fen}')
+        logger.debug(f'Starting MCTS in state {self.root_fen}')
         fen_to_node = {} # Index of all TreeNodes
         root = TreeNode(self.root_fen, fen_to_node)
         root.expand(self.prior_func_builder([self.root_fen]))
@@ -31,9 +31,9 @@ class MCTSEvaluator:
 
             if max_time_s > 0 and time() - start_time > max_time_s:
                 out_of_time = True
-                logger.info(f'Out of time for MCTS evaluation')
+                logger.debug(f'Out of time for MCTS evaluation')
 
-        logger.info(f'Completed {i} rounds of MCTS')
+        logger.debug(f'Completed {i} rounds of MCTS')
 
         return root
 

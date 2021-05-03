@@ -63,7 +63,7 @@ class GameRunner:
             max_time_s=self.max_time_s
         )
         sampled_move = self._sample_move(root)
-        logger.info(f'Sampled move: {sampled_move}')
+        logger.debug(f'Sampled move: {sampled_move}')
         board.push(sampled_move)
 
         return MCTSDist(root)
@@ -95,9 +95,9 @@ class GameRunner:
             curr_state = self.state_encoder.encode_state_with_history(boards)
             with torch.no_grad():
                 curr_state = curr_state.unsqueeze(0).to(self.device)
-                _, net_logits = network(curr_state)
+                _, net_log_probs = network(curr_state)
 
-            net_policy = to_probabilities(net_logits).squeeze()
+            net_policy = net_log_probs.exp().squeeze()
             mask_invalid_moves(net_policy, chess.Board(fens[-1]), device=self.device)
 
             def prior_func(move):
