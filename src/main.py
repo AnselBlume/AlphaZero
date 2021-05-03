@@ -1,7 +1,8 @@
-import torch
-import encode_state
-import mask_policy
-from network import Network
-import sample_policy
+import coloredlogs
+coloredlogs.install(level='INFO', fmt='%(asctime)s %(name)s %(levelname)s %(message)s')
 
+def main():
+    pass
+    
 if __name__ == '__main__':
+    main()

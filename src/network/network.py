@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 from torch.nn import functional as F
+from network.encode_state import M, L
 
 def to_probabilities(policy_logits, temp=2):
     '''
@@ -29,9 +30,11 @@ class ResidualBlock(nn.Module):
         return Y
 
 class Network(nn.Module):
-    def __init__(self, in_channels, n_res_blocks=19, n_filters=256,
+    def __init__(self, T, n_res_blocks=19, n_filters=256,
                  compress_filters=100):
         super().__init__()
+
+        in_channels = M * T + L
 
         self.conv = nn.Conv2d(in_channels, n_filters, 3, padding=1) # (256,8,8)
         self.tower = nn.Sequential(*[

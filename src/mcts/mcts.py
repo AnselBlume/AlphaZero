@@ -18,7 +18,7 @@ class MCTSEvaluator:
     def mcts(self, std_ucb=False, max_trials=50, max_time_s=-1):
         fen_to_node = {} # Index of all TreeNodes
         root = TreeNode(self.root_fen, fen_to_node)
-        root.expand(self.prior_func_builder([]))
+        root.expand(self.prior_func_builder([self.root_fen]))
 
         start_time = time()
         out_of_time = False
