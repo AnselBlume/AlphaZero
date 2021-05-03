@@ -1,10 +1,11 @@
 from .mask_policy import square_move_to_index
 from utils import square_to_n_n
 import chess
+import torch
 
 class MCTSDist:
     '''
-        The information from the MCTS distribution obtained form the root
+        The information from the MCTS distribution obtained from the root
         to be stored in the replay memory.
     '''
     def __init__(self, root):
@@ -16,7 +17,7 @@ class MCTSPolicyEncoder:
     def __init__(self, temp=2):
         self.temp = temp
 
-    def get_mcts_policy(mcts_dist):
+    def get_mcts_policy(self, mcts_dist):
         '''
             Takes the MCTSDist and converts it to a gold
             distribution in the shape of the network's policy.

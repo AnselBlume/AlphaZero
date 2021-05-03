@@ -3,6 +3,7 @@ from .encode_state import StateEncoder
 from .network import to_probabilities
 import chess
 import torch.nn.functional as F
+import torch
 
 class MCTSLoss:
     def __init__(self, T, temp=2, device='cpu'):
@@ -11,20 +12,24 @@ class MCTSLoss:
         self.state_encoder = StateEncoder(T)
         self.device = device
 
-    def get_loss(network, mcts_dist_histories):
+    def get_loss(self, network, mcts_dist_histories):
         '''
             network is the neural network whose loss will be computed.
 
             mcts_dist_histories is a list of lists of MCTSDist objects obtained from
-            running mcts. Each list in mcts_dist_histories contains the history MCTSDist
-            states leading up to the current state. Each list will have length T.
+            running mcts a list of (mcts_dist_history). Each list in mcts_dist_histories contains the history MCTSDist
+            states leading up to the current state. Each list will have length <= T.
+
+            Each mcts_dist_history list represents a single move: the history
+            is for input to the neural network, with the final MCTSDist representing
+            the final state in which the move probabilities were computed by MCTS.
         '''
         # Compute network outputs
         encodings = [
             self._build_final_state_encoding(mcts_dists)
             for mcts_dists in mcts_dist_histories
         ]
-        encodings = torch.stack(encodings, dim=0)
+        encodings = torch.stack(encodings, dim=0).to(self.device)
         net_vals, net_policies = network(encodings)
         net_policies = to_probabilities(net_policies)
 
@@ -40,14 +45,14 @@ class MCTSLoss:
             mcts_vals.append(mcts_val)
             mcts_policies.append(mcts_policy)
 
-        mcts_vals = torch.tensor(mcts_vals).to(device)
-        mcts_policies = torch.stack(mcts_policies, dim=0).to(device)
+        mcts_vals = torch.tensor(mcts_vals).reshape(-1, 1).to(self.device)
+        mcts_policies = torch.stack(mcts_policies, dim=0).to(self.device)
 
         assert mcts_vals.shape == net_vals.shape
         assert mcts_policies.shape == net_policies.shape
 
         mse = F.mse_loss(net_vals, mcts_vals)
-        ce = (mcts_policies * net_policies.log()).sum() / len(mcts_dist_histories)
+        ce = -(mcts_policies * net_policies.log()).sum() / len(mcts_dist_histories)
 
         # Let the optimizer handle l2 regularization
 

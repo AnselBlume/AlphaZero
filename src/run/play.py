@@ -11,8 +11,10 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+START_FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'
+
 class GameRunner:
-    def __init__(self, T, temp=2, std_ucb=False, max_trials=500, max_time_s=10,
+    def __init__(self, T, temp=2, std_ucb=True, max_trials=500, max_time_s=10,
                  device='cpu'):
         self.T = T
         self.temp = temp
@@ -22,23 +24,27 @@ class GameRunner:
         self.state_encoder = StateEncoder(T)
         self.device = device
 
-    def play_game(self, network):
-        board = chess.Board()
+    def play_game(self, network, start_fen=START_FEN):
+        network.eval()
+        board = chess.Board(start_fen)
         fen_history = [] # Could use a deque here
 
         mcts_dists = []
-        logger.info(f'Current FEN: {board.fen()}')
+        turn = 0
+        logger.info(f'Starting FEN: {board.fen()}')
         while board.outcome() is None:
             mcts_dist = self.play_turn(board, network, fen_history[-self.T:])
             mcts_dists.append(mcts_dist)
             fen_history.append(board.fen())
-            logger.info(f'Current FEN: {board.fen()}')
+
+            turn += 1
+            logger.info(f'FEN after turn {turn}: {board.fen()}')
 
         # Build mcts_dist_histories
         if self.T > len(mcts_dists):
-            return [mcts_dists]
+            return board, [mcts_dists]
 
-        mcts_dist_histories = [mcts_dists[i:i+T] for i in range(len(mcts_dists)-T+1)]
+        mcts_dist_histories = [mcts_dists[i:i+self.T] for i in range(len(mcts_dists)-self.T+1)]
 
         return board, mcts_dist_histories
 

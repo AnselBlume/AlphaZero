@@ -1,13 +1,13 @@
 import os
 import sys
 sys.path.insert(1, os.path.realpath('../src'))
-from run.play import GameRunner
 from network.network import Network
+from run.train import train
 import coloredlogs
 coloredlogs.install(level='INFO', fmt='%(asctime)s %(name)s %(levelname)s %(message)s')
 
 if __name__ == '__main__':
     device = 'cpu'
-    net = Network(1).to(device)
-    game_runner = GameRunner(1, device=device)
-    board, mcts_dists_histories = game_runner.play_game(net)
+    T = 2
+    start_fen = 'k7/8/1K6/2Q5/8/8/8/8 w - - 0 1'
+    train(T, device=device, start_fen=start_fen)

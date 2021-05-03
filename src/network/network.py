@@ -8,9 +8,8 @@ def to_probabilities(policy_logits, temp=2):
         policy_logits is a tensor of shape (batch_size, 8, 8, 73)
     '''
     orig_shape = policy_logits.shape
-    policy_logits = torch.exp(policy_logits / temp)
     policy_logits = policy_logits.reshape(policy_logits.shape[0], -1)
-    policy_probs = policy_logits / policy_logits.sum(dim=1, keepdim=True)
+    policy_probs = F.softmax(policy_logits, dim=1)
     policy_probs = policy_probs.reshape(orig_shape)
 
     return policy_probs
@@ -51,9 +50,9 @@ class Network(nn.Module):
         Y = self.tower(Y)
         compressed = self.compress(Y)
         compressed = F.relu(compressed)
-        flattened = compressed.flatten()
+        flattened = compressed.reshape(X.shape[0], -1)
 
-        value = self.value_head(flattened)
+        value = torch.tanh(self.value_head(flattened))
         policy = self.policy_head(flattened).reshape(-1, 8, 8, 73)
 
         return value, policy
