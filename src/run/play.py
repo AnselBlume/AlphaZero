@@ -14,10 +14,10 @@ logger = logging.getLogger(__name__)
 
 START_FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'
 
-MAX_TURNS = 200
+MAX_TURNS = 300
 
 class GameRunner:
-    def __init__(self, T, temp=2, std_ucb=True, max_trials=500, max_time_s=10,
+    def __init__(self, T, temp=2, std_ucb=True, max_trials=1000, max_time_s=10,
                  device='cpu'):
         self.T = T
         self.temp = temp
@@ -45,7 +45,6 @@ class GameRunner:
 
             if turn >= MAX_TURNS:
                 break
-
 
         # Build mcts_dist_histories
         if self.T > len(mcts_dists):
