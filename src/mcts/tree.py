@@ -108,7 +108,8 @@ class TreeNode:
 
         # Don't compute for log message unless necessary
         if logger.getEffectiveLevel() == logging.DEBUG:
-            logger.debug(list(map(lambda e: f'{e.uci}: {e.get_ucb(trials_so_far)}', self.out_edges)))
+            #logger.debug(list(map(lambda e: f'{e.uci}: {e.get_ucb(trials_so_far)}', self.out_edges)))
+            pass
 
         best_edge = self.out_edges[0]
         best_ucb = best_edge.get_ucb(trials_so_far)

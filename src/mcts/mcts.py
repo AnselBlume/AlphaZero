@@ -2,6 +2,7 @@ import chess
 from .tree import TreeNode
 import logging
 from time import time
+from numpy.random import randint
 
 logger = logging.getLogger(__name__)
 
@@ -74,7 +75,7 @@ class MCTSEvaluator:
                 path.append(curr)
                 fen_path.append(curr)
 
-            value = self.rollout(curr)
+            value = self.rollout_fast(curr)
 
         self.backup(path, value)
 
@@ -107,6 +108,29 @@ class MCTSEvaluator:
             to_unexpand.unexpand()
 
         return value
+
+    def rollout_fast(self, to_rollout):
+        '''
+            Much faster rollout version that doesn't construct the tree, since
+            we're trimming it off anyways.
+
+            Just simulates with chess.Board
+        '''
+        board = chess.Board(to_rollout.fen)
+        curr_player = board.turn
+        outcome = board.outcome()
+
+        while outcome is None:
+            moves = list(board.legal_moves)
+            rand_move = moves[randint(0, len(moves))]
+            board.push(rand_move)
+            outcome = board.outcome()
+
+        winner = outcome.winner
+        if winner is None:
+            return 0
+
+        return 1 if curr_player == winner else -1
 
     def get_terminal_value(self, terminal):
         winner = terminal.outcome.winner
