@@ -7,10 +7,10 @@ from torch.nn import functional as F
 import chess
 from utils import square_to_n_n
 
-def top_net_moves(fen, network, temp=2, k=5, device='cpu'):
+def top_net_moves(fen, network, T=8, temp=2, k=5, device='cpu'):
     # Get the network's output policy
     board = chess.Board(fen)
-    state = StateEncoder().encode_state_with_history([board]).to(device)
+    state = StateEncoder(T).encode_state_with_history([board]).to(device)
     with torch.no_grad():
         val, log_probs = network(state.unsqueeze(0))
     val, probs = val.item(), log_probs.exp().squeeze()
@@ -28,9 +28,9 @@ def top_net_moves(fen, network, temp=2, k=5, device='cpu'):
 
     return val, list(zip(top_ucis, top_probs))
 
-def top_mcts_moves(fen, network, temp=2, k=5, device='cpu', max_time_s=10):
+def top_mcts_moves(fen, network, T=8, temp=2, k=5, device='cpu', max_time_s=10):
     # Build inputs for MCTS
-    state_encoder = StateEncoder()
+    state_encoder = StateEncoder(T)
 
     # Modified from GameRunner
     def prior_func_builder(fens):

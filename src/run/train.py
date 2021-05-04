@@ -57,7 +57,7 @@ def train(T, device='cpu', num_games=10, chkpt_path=None, start_fen=START_FEN,
         logger.info(f'Saving updated network')
         save_state(net, optimizer, games_trained, replay_mem, LATEST_CHKPT_PATH)
 
-        if game_num == 1 or game_num % 5 == 0:
+        if game_num == 1 or game_num % 10 == 0:
             save_state(net, optimizer, games_trained, replay_mem, CHKPT_NUM_FMT % game_num)
 
     return net
