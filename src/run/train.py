@@ -79,7 +79,7 @@ def load_state(T, chkpt_path, device):
     optimizer = Adam(net.parameters(), weight_decay=1e-4)
 
     if chkpt_path is not None:
-        checkpoint = torch.load(chkpt_path)
+        checkpoint = torch.load(chkpt_path, map_location=torch.device(device))
         net.load_state_dict(checkpoint[MODEL_KEY])
         optimizer.load_state_dict(checkpoint[OPTIMIZER_KEY])
         games_trained = checkpoint[GAMES_TRAINED_KEY]
