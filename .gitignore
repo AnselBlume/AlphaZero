@@ -6,3 +6,4 @@
 *.pages
 *.swp
 *wandb*
+checkpoints/*
