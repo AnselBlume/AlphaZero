@@ -17,7 +17,7 @@ START_FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'
 MAX_TURNS = 200
 
 class GameRunner:
-    def __init__(self, T, temp=2, std_ucb=True, max_trials=500, max_time_s=10,
+    def __init__(self, T, temp=2, std_ucb=True, max_trials=1000, max_time_s=10,
                  device='cpu'):
         self.T = T
         self.temp = temp

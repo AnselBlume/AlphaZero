@@ -28,7 +28,8 @@ def top_net_moves(fen, network, T=8, temp=2, k=5, device='cpu'):
 
     return val, list(zip(top_ucis, top_probs))
 
-def top_mcts_moves(fen, network, T=8, temp=2, k=5, device='cpu', max_time_s=10):
+def top_mcts_moves(fen, network, T=8, temp=2, k=5, device='cpu',
+                   max_trials=1000, max_time_s=10):
     # Build inputs for MCTS
     state_encoder = StateEncoder(T)
 
@@ -58,7 +59,7 @@ def top_mcts_moves(fen, network, T=8, temp=2, k=5, device='cpu', max_time_s=10):
 
     # Run MCTS
     mcts_evaluator = MCTSEvaluator(fen, prior_func_builder)
-    root = mcts_evaluator.mcts(max_time_s=max_time_s)
+    root = mcts_evaluator.mcts(max_trials=max_trials, max_time_s=max_time_s)
 
     # Get move distribution; computation analogous to GameRunner._sample_move
     # All moves are legal so no need to remove probability 0 moves like in top_net_moves
