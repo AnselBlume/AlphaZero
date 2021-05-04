@@ -9,7 +9,6 @@ import os
 import logging
 import wandb
 
-wandb.init(project='alphazero', entity='blume5', reinit=True)
 logger = logging.getLogger(__name__)
 
 GAMES_TRAINED_KEY = 'games_trained'
@@ -26,6 +25,8 @@ TEMP = 2 # Temperature for the network's log probabilities and MCTS' probabiliti
 def train(T, device='cpu', num_games=10, chkpt_path=None, start_fen=START_FEN,
           max_trials=1000, max_time_s=30):
     net, optimizer, games_trained, replay_mem = load_state(T, chkpt_path, device)
+
+    wandb.init(project='alphazero', entity='blume5', reinit=True)
     wandb.watch(net, log_freq=1, log='all')
 
     game_runner = GameRunner(T, device=device, max_trials=max_trials, max_time_s=max_time_s)
