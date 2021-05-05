@@ -71,7 +71,7 @@ class TreeNode:
             else:
                 child_state = TreeNode(child_fen, self.fen_to_node, is_rollout=is_rollout)
 
-            # Add an edge to the new state to this node
+            # Add an edge to the new state from this node
             prior = prior_func(move)
             out_edge = TreeEdge(
                 move.uci(),
