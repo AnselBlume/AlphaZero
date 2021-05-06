@@ -5,16 +5,27 @@ from time import time
 from numpy.random import randint
 import ctypes
 import glob
+import os
 
 logger = logging.getLogger(__name__)
 
-# Set up the C++ rollout library
-# Refer to test/test_lib.py for the code
-os.system('c_rollout/build_lib.sh')
-libfile = glob.glob('build/*/*.so')[0]
-rollout_lib = ctypes.CDLL(libfile)
-rollout_lib.rollout.restype = ctypes.c_int
-rollout_lib.rollout.argtypes = [ctypes.c_char_p]
+USE_CPP_ROLLOUT = False
+
+if USE_CPP_ROLLOUT:
+    # Hack to set up the C++ rollout library on any system
+    # Refer to test/test_lib.py for the code
+    orig_wd = os.getcwd()
+    dir_path = os.path.dirname(os.path.realpath(__file__))
+    os.chdir(os.path.join(dir_path, 'c_rollout'))
+    LIB_FILE = 'rollout.so'
+
+    if not os.path.exists(LIB_FILE) and os.system(f'g++ -O3 -o {LIB_FILE} -w rollout.cpp thc.cpp'):
+        raise RuntimeError('A problem occurred building the C++ rollout library')
+    rollout_lib = ctypes.CDLL(LIB_FILE)
+    rollout_lib.rollout.restype = ctypes.c_int
+    rollout_lib.rollout.argtypes = [ctypes.c_char_p]
+
+    os.chdir(orig_wd)
 
 # Fantastic explanation of MCTS:
 # https://www.youtube.com/watch?v=UXW2yZndl7U
@@ -64,8 +75,6 @@ class MCTSEvaluator:
             edge = curr.get_edge_to_explore(trials_so_far)
             curr = edge.to_node
 
-            logger.debug(f'Exploring: {edge.uci}')
-
             path.append(edge)
             path.append(curr)
             fen_path.append(curr.fen)
@@ -79,13 +88,14 @@ class MCTSEvaluator:
                 edge = curr.get_edge_to_explore(trials_so_far)
                 curr = edge.to_node
 
-                logger.debug(f'Exploring: {edge.uci}')
-
                 path.append(edge)
                 path.append(curr)
                 fen_path.append(curr)
 
-            value = rollout_lib.rollout(curr.fen())
+            if USE_CPP_ROLLOUT:
+                value = rollout_lib.rollout(curr.fen.encode('ascii'))
+            else:
+                value = self.rollout_fast(curr)
 
         self.backup(path, value)
 

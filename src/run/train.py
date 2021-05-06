@@ -27,7 +27,7 @@ def train(T, device='cpu', num_games=10, chkpt_path=None, start_fen=START_FEN,
     net, optimizer, games_trained, replay_mem = load_state(T, chkpt_path, device)
 
     wandb.init(project='alphazero', entity='blume5', reinit=True)
-    wandb.watch(net, log_freq=1, log='all')
+    #wandb.watch(net, log_freq=1, log='all') # Slows down MCTS evaluation significantly (by approx a factor of 10)
 
     game_runner = GameRunner(T, device=device, max_trials=max_trials, max_time_s=max_time_s)
     mcts_loss = MCTSLoss(T, device=device, temp=TEMP)
