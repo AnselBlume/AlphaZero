@@ -3,8 +3,18 @@ from .tree import TreeNode
 import logging
 from time import time
 from numpy.random import randint
+import ctypes
+import glob
 
 logger = logging.getLogger(__name__)
+
+# Set up the C++ rollout library
+# Refer to test/test_lib.py for the code
+os.system('c_rollout/build_lib.sh')
+libfile = glob.glob('build/*/*.so')[0]
+rollout_lib = ctypes.CDLL(libfile)
+rollout_lib.rollout.restype = ctypes.c_int
+rollout_lib.rollout.argtypes = [ctypes.c_char_p]
 
 # Fantastic explanation of MCTS:
 # https://www.youtube.com/watch?v=UXW2yZndl7U
@@ -75,7 +85,7 @@ class MCTSEvaluator:
                 path.append(curr)
                 fen_path.append(curr)
 
-            value = self.rollout_fast(curr)
+            value = rollout_lib.rollout(curr.fen())
 
         self.backup(path, value)
 
