@@ -7,3 +7,4 @@
 *.swp
 *wandb*
 checkpoints/*
+src/mcts/c_rollout/build/*
