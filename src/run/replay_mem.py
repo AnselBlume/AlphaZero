@@ -2,7 +2,7 @@ import torch
 from collections import deque
 
 class ReplayMemory:
-    def __init__(self, last_k=2):
+    def __init__(self, last_k=10):
         '''
             last_k is the number of games to save in the memory.
         '''

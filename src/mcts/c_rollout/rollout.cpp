@@ -63,7 +63,6 @@ int rollout(char* fen) {
     static std::random_device rd;
     static std::mt19937 mt(rd());
 
-    // Assumes the current fen isn't terminal
     thc::ChessRules cr;
     cr.Forsyth(fen);
     bool isOrigWhite = cr.WhiteToPlay();
