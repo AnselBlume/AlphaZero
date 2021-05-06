@@ -9,19 +9,38 @@ import os
 
 logger = logging.getLogger(__name__)
 
-USE_CPP_ROLLOUT = False
+USE_CPP_ROLLOUT = True
 
 if USE_CPP_ROLLOUT:
+    # Note that logs and prints don't occur during import on Google Colab
+
     # Hack to set up the C++ rollout library on any system
     # Refer to test/test_lib.py for the code
     orig_wd = os.getcwd()
     dir_path = os.path.dirname(os.path.realpath(__file__))
     os.chdir(os.path.join(dir_path, 'c_rollout'))
+
+    # Google Colab is okay with the script version for some reason
+    # os.system returns the exit code; exit code != 0 implies an error occurred
+    if not os.path.exists('./build'):
+        if os.system('chmod u+x ./build_lib.sh && ./build_lib.sh'):
+            raise RuntimeError('A problem occurred building the C++ rollout library')
+        logger.info('C++ rollout library built successfully')
+
+    libfile = glob.glob('build/*/*.so')[0]
+    rollout_lib = ctypes.CDLL(libfile)
+
+    '''
+    # Google Colab doesn't seem to like the g++ version
     LIB_FILE = 'rollout.so'
 
-    if not os.path.exists(LIB_FILE) and os.system(f'g++ -O3 -o {LIB_FILE} -w rollout.cpp thc.cpp'):
-        raise RuntimeError('A problem occurred building the C++ rollout library')
+    if not os.path.exists(LIB_FILE):
+        if os.system(f'g++ -O3 -o {LIB_FILE} -w rollout.cpp thc.cpp'):
+            raise RuntimeError('A problem occurred building the C++ rollout library')
+        logger.info('C++ rollout library built successfully')
+
     rollout_lib = ctypes.CDLL(LIB_FILE)
+    '''
     rollout_lib.rollout.restype = ctypes.c_int
     rollout_lib.rollout.argtypes = [ctypes.c_char_p]
 

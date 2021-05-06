@@ -2,7 +2,7 @@ import torch
 from network.network import Network
 from run.train import train, LATEST_CHKPT_PATH
 import coloredlogs
-coloredlogs.install(level='DEBUG', fmt='%(asctime)s %(name)s %(levelname)s %(message)s')
+coloredlogs.install(level='INFO', fmt='%(asctime)s %(name)s %(levelname)s %(message)s')
 
 if __name__ == '__main__':
     device = 'cuda' if torch.cuda.is_available() else 'cpu'

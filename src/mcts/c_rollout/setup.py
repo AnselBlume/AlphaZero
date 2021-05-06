@@ -10,8 +10,8 @@ setup(
             'rollout', # Name of the library
             ['rollout.cpp', 'thc.cpp'],
             extra_compile_args=[
-                '-std=c++20',
-                'w', # Suppress warnings
+                '-std=c++14',
+                '-w', # Suppress warnings
                 '-O3'
             ])
     ],
