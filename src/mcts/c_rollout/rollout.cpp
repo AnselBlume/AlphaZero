@@ -16,7 +16,7 @@
 
 // Function declarations
 // extern "C" necessary for g++ to export in C compatible format
-extern "C" bool isDraw(thc::ChessRules&);
+extern "C" bool isAutomaticDraw(thc::ChessRules&);
 extern "C" bool isTerminalAndValue(thc::ChessRules&, bool, int&);
 extern "C" int rollout(char*);
 extern "C" void display_position(thc::ChessRules, std::string&);
@@ -47,14 +47,25 @@ bool isTerminalAndValue(thc::ChessRules & cr, bool isOrigWhite, int & value) {
             value = 0;
     }
 
-    return terminal != thc::NOT_TERMINAL || isDraw(cr);
+    return terminal != thc::NOT_TERMINAL || isAutomaticDraw(cr);
 }
 
-bool isDraw(thc::ChessRules & cr) {
-    thc::DRAWTYPE result;
+bool isAutomaticDraw(thc::ChessRules & cr) {
+    // Check for 75 move no progress rule
+    if (cr.half_move_clock >= 150) {
+        return true;
+    }
 
+    // Check for fivefold repetition rule
+    if (cr.GetRepetitionCount() >= 5) {
+        return true;
+    }
+
+    // Check for insufficient material
     // First arg doesn't matter as only care about forced draw
+    thc::DRAWTYPE result;
     cr.IsInsufficientDraw(false, result);
+
     return result == thc::DRAWTYPE_INSUFFICIENT_AUTO;
 }
 
@@ -80,7 +91,7 @@ int rollout(char* fen) {
         std::uniform_int_distribution<> rand(0, moves.size() - 1);
         int randInd = rand(mt);
 
-        cr.PushMove(moves[randInd]);
+        cr.PlayMove(moves[randInd]);
         moves.clear();
     }
 }

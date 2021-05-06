@@ -7,7 +7,7 @@ coloredlogs.install(level='INFO', fmt='%(asctime)s %(name)s %(levelname)s %(mess
 if __name__ == '__main__':
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     T = 8
-    max_time_s = 1
+    max_time_s = 2
     start_fen = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'
     net = train(
         T,
