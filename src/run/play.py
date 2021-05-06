@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 START_FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'
 
-MAX_TURNS = 300
+MAX_TURNS = float('inf')
 
 class GameRunner:
     def __init__(self, T, temp=2, std_ucb=True, max_trials=1000, max_time_s=10,
