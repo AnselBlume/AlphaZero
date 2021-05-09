@@ -20,17 +20,15 @@ CHECKPOINT_DIR = 'checkpoints'
 LATEST_CHKPT_PATH = 'latest_chkpt.tar'
 CHKPT_NUM_FMT = 'chkpt_%d.tar'
 
-TEMP = 2 # Temperature for the network's log probabilities and MCTS' probabilities
-
 def train(T, device='cpu', num_games=10, chkpt_path=None, start_fen=START_FEN,
-          max_trials=1000, max_time_s=30):
-    net, optimizer, games_trained, replay_mem = load_state(T, chkpt_path, device)
+          max_trials=1000, max_time_s=30, network_temp=2):
+    net, optimizer, games_trained, replay_mem = load_state(T, chkpt_path, device, network_temp=network_temp)
 
     wandb.init(project='alphazero', entity='blume5', reinit=True)
     #wandb.watch(net, log_freq=1, log='all') # Slows down MCTS evaluation significantly (by approx a factor of 10)
 
     game_runner = GameRunner(T, device=device, max_trials=max_trials, max_time_s=max_time_s)
-    mcts_loss = MCTSLoss(T, device=device, temp=TEMP)
+    mcts_loss = MCTSLoss(T, device=device)
 
     for game_num in range(games_trained + 1, num_games + games_trained + 1):
         logger.info(f'Starting self-play game {game_num}')
@@ -74,8 +72,8 @@ def save_state(net, optimizer, games_trained, replay_mem, chkpt_path):
         REPLAY_MEM_KEY: replay_mem
     }, os.path.join(CHECKPOINT_DIR, chkpt_path))
 
-def load_state(T, chkpt_path, device):
-    net = Network(T, temp=TEMP).to(device)
+def load_state(T, chkpt_path, device, network_temp=2):
+    net = Network(T, temp=network_temp).to(device)
     optimizer = Adam(net.parameters(), lr=1e-4, weight_decay=1e-4)
 
     if chkpt_path is not None and os.path.exists(chkpt_path):

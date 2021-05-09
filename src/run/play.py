@@ -17,10 +17,11 @@ START_FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'
 MAX_TURNS = float('inf')
 
 class GameRunner:
-    def __init__(self, T, temp=2, std_ucb=False, max_trials=1000, max_time_s=10,
+    def __init__(self, T, temp=1, temp_divisor=1.013, std_ucb=False, max_trials=1000, max_time_s=10,
                  device='cpu'):
         self.T = T
         self.temp = temp
+        self.temp_divisor = temp_divisor
         self.std_ucb = std_ucb
         self.max_trials = max_trials
         self.max_time_s = max_time_s
@@ -37,7 +38,7 @@ class GameRunner:
         turn = 0
         logger.info(f'Starting FEN: {board.fen()}')
         while board.outcome() is None:
-            mcts_dist, subtree = self.play_turn(board, network, fen_history[-self.T:], subtree=subtree)
+            mcts_dist, subtree = self.play_turn(board, network, fen_history[-self.T:], subtree=subtree, turn=turn)
             mcts_dists.append(mcts_dist)
             fen_history.append(board.fen())
 
@@ -55,7 +56,7 @@ class GameRunner:
 
         return board, mcts_dist_histories
 
-    def play_turn(self, board, network, fen_history, subtree=None):
+    def play_turn(self, board, network, fen_history, subtree=None, turn=1):
         '''
             fen_history is a list of FEN strings detailing the history up until
             and not including the current state.
@@ -69,20 +70,21 @@ class GameRunner:
             max_trials=self.max_trials,
             max_time_s=self.max_time_s
         )
-        sampled_move, sampled_ind = self._sample_move(root)
+        effective_temp = self.temp / self.temp_divisor ** turn
+        sampled_move, sampled_ind = self._sample_move(root, effective_temp)
         logger.debug(f'Sampled move: {sampled_move}')
         board.push(sampled_move)
 
-        return MCTSDist(root), root.out_edges[sampled_ind].to_node
+        return MCTSDist(root, effective_temp), root.out_edges[sampled_ind].to_node
 
-    def _sample_move(self, root):
+    def _sample_move(self, root, effective_temp):
         visits = torch.tensor([edge.n_visits for edge in root.out_edges])
 
         # In the same way as in MCTSPolicyEncoder, perform softmax over visits
         # as opposed to this harder version used in the original paper
-        visits = visits ** (1 / self.temp) # Original AlphaZero probability
+        visits = visits ** (1 / effective_temp) # Original AlphaZero probability
         visits /= visits.sum() # Original AlphaZero formulation
-        #visits = F.softmax(visits / self.temp, dim=0)
+        #visits = F.softmax(visits / effective_temp, dim=0)
 
         sampled_ind = torch.multinomial(visits, 1).item()
         sampled_edge = root.out_edges[sampled_ind]

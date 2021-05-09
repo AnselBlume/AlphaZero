@@ -9,15 +9,13 @@ class MCTSDist:
         The information from the MCTS distribution obtained from the root
         to be stored in the replay memory.
     '''
-    def __init__(self, root):
+    def __init__(self, root, temp):
         self.fen = root.fen
         self.value = root.get_state_value()
         self.move_data = [MoveData(edge) for edge in root.out_edges]
-
-class MCTSPolicyEncoder:
-    def __init__(self, temp=2):
         self.temp = temp
 
+class MCTSPolicyEncoder:
     def get_mcts_policy(self, mcts_dist):
         '''
             Takes the MCTSDist and converts it to a gold
@@ -31,11 +29,11 @@ class MCTSPolicyEncoder:
             # Since MCTS is very expensive on a single core machine, use softmax instead
             # of hard probabilities which are frequently zero as n_visits are sparse
             # score = move.n_visits
-            score = move.n_visits ** (1 / self.temp) # Original AlphaZero score
+            score = move.n_visits ** (1 / mcts_dist.temp) # Original AlphaZero score
 
             policy[row,col,index] = score
 
-        # policy = F.softmax(policy.flatten() / self.temp, dim=0) # Softer distribution than original AlphaZero
+        # policy = F.softmax(policy.flatten() / mcts_dist.temp, dim=0) # Softer distribution than original AlphaZero
         # policy = policy.reshape(8,8,73)
         policy /= policy.sum() # Original AlphaZero normalization
 

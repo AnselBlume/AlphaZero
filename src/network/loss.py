@@ -5,9 +5,8 @@ import torch.nn.functional as F
 import torch
 
 class MCTSLoss:
-    def __init__(self, T, temp=2, device='cpu'):
-        self.temp = temp
-        self.mcts_policy_encoder = MCTSPolicyEncoder(temp=temp)
+    def __init__(self, T, device='cpu'):
+        self.mcts_policy_encoder = MCTSPolicyEncoder()
         self.state_encoder = StateEncoder(T)
         self.device = device
 
