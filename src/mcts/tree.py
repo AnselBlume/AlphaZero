@@ -166,7 +166,7 @@ class TreeNode:
         return str(self)
 
 class TreeEdge:
-    UCB_FACTOR = 5
+    UCB_FACTOR = 20
 
     def __init__(self, uci, prior, from_node, to_node):
         self.uci = uci

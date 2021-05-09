@@ -26,7 +26,7 @@ def train(T, device='cpu', num_games=10, chkpt_path=None, start_fen=START_FEN,
           max_trials=1000, max_time_s=30):
     net, optimizer, games_trained, replay_mem = load_state(T, chkpt_path, device)
 
-    wandb.init(project='alphazero', entity='blume5', reinit=True)
+    #wandb.init(project='alphazero', entity='blume5', reinit=True)
     #wandb.watch(net, log_freq=1, log='all') # Slows down MCTS evaluation significantly (by approx a factor of 10)
 
     game_runner = GameRunner(T, device=device, max_trials=max_trials, max_time_s=max_time_s)
@@ -51,10 +51,10 @@ def train(T, device='cpu', num_games=10, chkpt_path=None, start_fen=START_FEN,
         optimizer.step()
 
         games_trained += 1
-        wandb.log({
-            'Loss' : loss.item(),
-            'Games trained' : games_trained
-        })
+        # wandb.log({
+        #     'Loss' : loss.item(),
+        #     'Games trained' : games_trained
+        # })
         logger.info(f'Saving updated network')
         save_state(net, optimizer, games_trained, replay_mem, LATEST_CHKPT_PATH)
 
@@ -76,9 +76,9 @@ def save_state(net, optimizer, games_trained, replay_mem, chkpt_path):
 
 def load_state(T, chkpt_path, device):
     net = Network(T, temp=TEMP).to(device)
-    optimizer = Adam(net.parameters(), weight_decay=1e-4)
+    optimizer = Adam(net.parameters(), lr=1e-4, weight_decay=1e-4)
 
-    if chkpt_path is not None:
+    if chkpt_path is not None and os.path.exists(chkpt_path):
         checkpoint = torch.load(chkpt_path, map_location=torch.device(device))
         net.load_state_dict(checkpoint[MODEL_KEY])
         optimizer.load_state_dict(checkpoint[OPTIMIZER_KEY])

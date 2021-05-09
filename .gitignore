@@ -6,6 +6,7 @@
 *.pages
 *.swp
 *wandb*
-*/checkpoints/*
+*checkpoints*
 src/mcts/c_rollout/build/*
 *.so
+.vscode

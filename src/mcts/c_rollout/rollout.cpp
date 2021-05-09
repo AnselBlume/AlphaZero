@@ -8,6 +8,7 @@
 
  */
 
+#include <assert.h>
 #include <stdio.h>
 #include <string>
 #include <random>
@@ -98,10 +99,29 @@ int rollout(char* fen) {
 
 int main()
 {
+    thc::ChessRules cr;
+    thc::Move move;
+    char * fen;
+    int value;
+
     // White checkmates black and black turn
-    char * fen = "k7/1Q6/1K6/8/8/8/8/8 b - - 0 1";
-    int value = rollout(fen);
+    fen = "k7/1Q6/1K6/8/8/8/8/8 b - - 0 1";
+    value = rollout(fen);
     printf("Value should be -1: %d\n", value);
+    assert(value == -1);
+
+    // White checkmates black in one turn and check value
+    fen = "k7/2Q5/1K6/8/8/8/8/8 w - - 0 1";
+
+    cr.Forsyth(fen);
+    assert(!isTerminalAndValue(cr, true, value));
+    assert(value == 0);
+
+    move.TerseIn(&cr, "c7b7");
+    cr.PlayMove(move);
+    assert(isTerminalAndValue(cr, true, value));
+    assert(value == 1);
+    printf("Value should be 1: %d\n", value);
 
     // Draw
     fen = "k7/8/4K3/8/8/8/8/8 b - - 0 1";
@@ -118,4 +138,28 @@ int main()
     fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
     value = rollout(fen);
     printf("Value should be arbitrary: %d\n", value);
+
+    // Check draw condition counts increasing
+    cr.Forsyth("rnbqkbnr/pp1ppppp/2p5/8/8/4P3/PPPP1PPP/RNBQKBNR w KQkq - 0 1");
+    for (int i = 0; i < 5; i++) {
+        move.TerseIn(&cr, "d1e2");
+        cr.PlayMove(move);
+        printf("Repetition count: %d\n", cr.GetRepetitionCount());
+        printf("Halfmove clock: %d\n", cr.half_move_clock);
+
+        move.TerseIn(&cr, "d8c7");
+        cr.PlayMove(move);
+        printf("Repetition count: %d\n", cr.GetRepetitionCount());
+        printf("Halfmove clock: %d\n", cr.half_move_clock);
+
+        move.TerseIn(&cr, "e2d1");
+        cr.PlayMove(move);
+        printf("Repetition count: %d\n", cr.GetRepetitionCount());
+        printf("Halfmove clock: %d\n", cr.half_move_clock);
+
+        move.TerseIn(&cr, "c7d8");
+        cr.PlayMove(move);
+        printf("Repetition count: %d\n", cr.GetRepetitionCount());
+        printf("Halfmove clock: %d\n", cr.half_move_clock);
+    }
 }
