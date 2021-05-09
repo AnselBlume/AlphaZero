@@ -2,7 +2,7 @@ import torch
 from collections import deque
 
 class ReplayMemory:
-    def __init__(self, last_k=10):
+    def __init__(self, last_k=5):
         '''
             last_k is the number of games to save in the memory.
         '''
@@ -10,7 +10,7 @@ class ReplayMemory:
         self.memory = deque()
 
     def save(self, mcts_dist_histories):
-        if len(self.memory) == self.last_k:
+        while len(self.memory) >= self.last_k:
             self.memory.popleft()
 
         self.memory.append(mcts_dist_histories)

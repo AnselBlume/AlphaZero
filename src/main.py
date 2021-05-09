@@ -8,7 +8,7 @@ if __name__ == '__main__':
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     T = 8
     max_time_s = 5
-    max_trials = 300
+    max_trials = float('inf')
     start_fen = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'
     net = train(
         T,

@@ -4,6 +4,8 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+INLINE_UCB = True
+
 class TreeNode:
     def __init__(self, fen, fen_to_node, is_rollout=False):
         '''
@@ -28,6 +30,8 @@ class TreeNode:
         # Not technically needed but nice to compute state value
         self.n_visits = 0
         self.score = 0
+
+        # Inline UCB computations
 
     def is_terminal(self):
         return self.outcome is not None
@@ -60,7 +64,7 @@ class TreeNode:
 
         # For each action, create a child node
         board = chess.Board(self.fen)
-        for move in board.legal_moves:
+        for i, move in enumerate(board.legal_moves):
             # Compute the next state from the move
             board.push(move)
             child_fen = board.fen()
@@ -77,13 +81,23 @@ class TreeNode:
                 move.uci(),
                 prior,
                 self,
-                child_state
+                child_state,
+                update_callback=self._build_inline_callback(i) if INLINE_UCB else None
             )
             self.out_edges.append(out_edge)
 
             board.pop() # Reset state to expand more moves
 
-        assert len(self.out_edges) > 0
+        num_edges = len(self.out_edges)
+
+        # For inline UCB computation
+        if INLINE_UCB:
+            self.edge_priors = np.array([edge.prior for edge in self.out_edges])
+            self.edge_visits = np.zeros(num_edges)
+            self.edge_scores = np.zeros(num_edges)
+            self.ones = np.ones(num_edges) # Alternative for edge_visits when edge_visits == 0
+
+        assert num_edges > 0
 
     def unexpand(self):
         self.out_edges = []
@@ -94,6 +108,13 @@ class TreeNode:
     def backup_update(self, score):
         self.score += score
         self.n_visits += 1
+
+    def _build_inline_callback(self, update_ind):
+        def callback(score):
+            self.edge_scores[update_ind] += score
+            self.edge_visits[update_ind] += 1
+
+        return callback
 
     def get_edge_to_explore(self, trials_so_far=None):
         '''
@@ -111,14 +132,24 @@ class TreeNode:
             #logger.debug(list(map(lambda e: f'{e.uci}: {e.get_ucb(trials_so_far)}', self.out_edges)))
             pass
 
-        best_edge = self.out_edges[0]
-        best_ucb = best_edge.get_ucb(trials_so_far)
+        if INLINE_UCB:
+            qs = self.edge_scores / np.maximum(self.edge_visits, self.ones)
+            us = np.sqrt(np.log(self.ones + trials_so_far) / (self.ones + self.edge_visits))
 
-        for edge in self.out_edges[1:]:
-            curr_ucb = edge.get_ucb(trials_so_far)
-            if curr_ucb > best_ucb:
-                best_edge = edge
-                best_ucb = curr_ucb
+            assert len(qs.shape) == 1
+            assert len(us.shape) == 1
+
+            best_ind = np.argmax(qs + TreeEdge.UCB_FACTOR * self.edge_priors * us)
+            best_edge = self.out_edges[best_ind]
+        else:
+            best_edge = self.out_edges[0]
+            best_ucb = best_edge.get_ucb(trials_so_far)
+
+            for edge in self.out_edges[1:]:
+                curr_ucb = edge.get_ucb(trials_so_far)
+                if curr_ucb > best_ucb:
+                    best_edge = edge
+                    best_ucb = curr_ucb
 
         return best_edge
 
@@ -168,7 +199,7 @@ class TreeNode:
 class TreeEdge:
     UCB_FACTOR = 20
 
-    def __init__(self, uci, prior, from_node, to_node):
+    def __init__(self, uci, prior, from_node, to_node, update_callback=None):
         self.uci = uci
         self.prior = prior
         self.score = 0
@@ -176,6 +207,8 @@ class TreeEdge:
 
         self.from_node = from_node
         self.to_node = to_node
+
+        self.update_callback = update_callback
 
     def get_ucb(self, trials_so_far=None):
         q = self.get_action_value()
@@ -192,6 +225,9 @@ class TreeEdge:
     def backup_update(self, score):
         self.score += score
         self.n_visits += 1
+
+        if self.update_callback is not None: # For inline UCB computation
+            self.update_callback(score)
 
     def get_action_value(self):
         return self.score / self.n_visits if self.n_visits > 0 else 0
