@@ -17,7 +17,7 @@ START_FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'
 MAX_TURNS = float('inf')
 
 class GameRunner:
-    def __init__(self, T, temp=2, std_ucb=True, max_trials=1000, max_time_s=10,
+    def __init__(self, T, temp=2, std_ucb=False, max_trials=1000, max_time_s=10,
                  device='cpu'):
         self.T = T
         self.temp = temp
@@ -33,10 +33,11 @@ class GameRunner:
         fen_history = [] # Could use a deque here
 
         mcts_dists = []
+        subtree = None # The previous MCTS subtree from which MCTS will be started
         turn = 0
         logger.info(f'Starting FEN: {board.fen()}')
         while board.outcome() is None:
-            mcts_dist = self.play_turn(board, network, fen_history[-self.T:])
+            mcts_dist, subtree = self.play_turn(board, network, fen_history[-self.T:], subtree=subtree)
             mcts_dists.append(mcts_dist)
             fen_history.append(board.fen())
 
@@ -54,7 +55,7 @@ class GameRunner:
 
         return board, mcts_dist_histories
 
-    def play_turn(self, board, network, fen_history):
+    def play_turn(self, board, network, fen_history, subtree=None):
         '''
             fen_history is a list of FEN strings detailing the history up until
             and not including the current state.
@@ -62,31 +63,31 @@ class GameRunner:
             board is a chess.Board describing the current state.
         '''
         prior_func_builder = self._get_prior_func_builder(network, fen_history)
-        mcts_evaluator = MCTSEvaluator(board.fen(), prior_func_builder)
+        mcts_evaluator = MCTSEvaluator(board.fen(), prior_func_builder, subtree=subtree)
         root = mcts_evaluator.mcts(
             std_ucb=self.std_ucb,
             max_trials=self.max_trials,
             max_time_s=self.max_time_s
         )
-        sampled_move = self._sample_move(root)
+        sampled_move, sampled_ind = self._sample_move(root)
         logger.debug(f'Sampled move: {sampled_move}')
         board.push(sampled_move)
 
-        return MCTSDist(root)
+        return MCTSDist(root), root.out_edges[sampled_ind].to_node
 
     def _sample_move(self, root):
         visits = torch.tensor([edge.n_visits for edge in root.out_edges])
 
         # In the same way as in MCTSPolicyEncoder, perform softmax over visits
         # as opposed to this harder version used in the original paper
-        #visits = visits ** (1 / self.temp) # Original AlphaZero probability
-        #visits /= visits.sum() # Original AlphaZero formulation
-        visits = F.softmax(visits / self.temp, dim=0)
+        visits = visits ** (1 / self.temp) # Original AlphaZero probability
+        visits /= visits.sum() # Original AlphaZero formulation
+        #visits = F.softmax(visits / self.temp, dim=0)
 
         sampled_ind = torch.multinomial(visits, 1).item()
         sampled_edge = root.out_edges[sampled_ind]
 
-        return chess.Move.from_uci(sampled_edge.uci)
+        return chess.Move.from_uci(sampled_edge.uci), sampled_ind
 
     def _get_prior_func_builder(self, network, fen_history):
         '''

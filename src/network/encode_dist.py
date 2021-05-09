@@ -30,14 +30,14 @@ class MCTSPolicyEncoder:
             index = square_move_to_index(move.from_square, move.to_square, move.promotion)
             # Since MCTS is very expensive on a single core machine, use softmax instead
             # of hard probabilities which are frequently zero as n_visits are sparse
-            score = move.n_visits
-            # score = move.n_visits ** (1 / self.temp) # Original AlphaZero score
+            # score = move.n_visits
+            score = move.n_visits ** (1 / self.temp) # Original AlphaZero score
 
             policy[row,col,index] = score
 
-        policy = F.softmax(policy.flatten() / self.temp, dim=0) # Softer distribution than original AlphaZero
-        policy = policy.reshape(8,8,73)
-        # policy /= policy.sum() # Original AlphaZero normalization
+        # policy = F.softmax(policy.flatten() / self.temp, dim=0) # Softer distribution than original AlphaZero
+        # policy = policy.reshape(8,8,73)
+        policy /= policy.sum() # Original AlphaZero normalization
 
         return policy
 

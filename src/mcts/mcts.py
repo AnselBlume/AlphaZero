@@ -50,28 +50,33 @@ if USE_CPP_ROLLOUT:
 # https://www.youtube.com/watch?v=UXW2yZndl7U
 
 class MCTSEvaluator:
-    def __init__(self, root_fen, prior_func_builder):
+    def __init__(self, root_fen, prior_func_builder, subtree=None):
         # TODO take in fen history of root_fen to pass into prior_func_builder
         self.root_fen = root_fen
         self.curr_player = chess.Board(root_fen).turn # For terminal state eval
         self.prior_func_builder = prior_func_builder
+        self.subtree = subtree # Whether to initialize the MCTS tree to this tree
 
-    def mcts(self, std_ucb=True, max_trials=500, max_time_s=float('inf')):
+    def mcts(self, std_ucb=False, max_trials=500, max_time_s=float('inf')):
         '''
             max_time_s < 0 indicates all the time necessary to finish
             max_trials.
         '''
         logger.debug(f'Starting MCTS in state:\n{chess.Board(self.root_fen)}')
         fen_to_node = {} # Index of all TreeNodes
-        root = TreeNode(self.root_fen, fen_to_node)
-        root.expand(self.prior_func_builder([self.root_fen]))
+        if self.subtree is None:
+            root = TreeNode(self.root_fen, fen_to_node)
+            root.expand(self.prior_func_builder([self.root_fen]))
+        else:
+            root = self.subtree
+            assert root.was_expanded()
 
         start_time = time()
         out_of_time = False
 
         i = 0
         while i < max_trials and not out_of_time:
-            self.evaluate(root, fen_to_node, i if std_ucb else None)
+            self.evaluate(root, fen_to_node, i, std_ucb=std_ucb)
             i += 1
 
             if max_time_s > 0 and time() - start_time > max_time_s:
@@ -82,7 +87,7 @@ class MCTSEvaluator:
 
         return root
 
-    def evaluate(self, root, fen_to_node, trials_so_far=None):
+    def evaluate(self, root, fen_to_node, trials_so_far, std_ucb=False):
         # Path will contain nodes and edges so we can update state values
         # though we technically only care about action values
         path = [root]
@@ -91,7 +96,7 @@ class MCTSEvaluator:
         # Descend until we find a leaf (a node which hasn't been expanded)
         curr = root
         while not curr.is_leaf():
-            edge = curr.get_edge_to_explore(trials_so_far)
+            edge = curr.get_edge_to_explore(trials_so_far, std_ucb=std_ucb)
             curr = edge.to_node
 
             path.append(edge)

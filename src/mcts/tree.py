@@ -22,8 +22,9 @@ class TreeNode:
         self.outcome = chess.Board(self.fen).outcome()
 
         # Add self to node index if not created from a rollout
-        if not is_rollout:
-            fen_to_node[fen] = self
+        # Uses too much memory when saving the subtree from turn to turn
+        # if not is_rollout:
+        #     fen_to_node[fen] = self
         self.is_rollout = is_rollout
         self.fen_to_node = fen_to_node
 
@@ -70,6 +71,7 @@ class TreeNode:
             child_fen = board.fen()
 
             # If we're in a rollout,
+            # This is currently disabled as takes up too much memory when the subtree is saved
             if not is_rollout and child_fen in self.fen_to_node:
                 child_state = self.fen_to_node[child_fen]
             else:
@@ -116,7 +118,7 @@ class TreeNode:
 
         return callback
 
-    def get_edge_to_explore(self, trials_so_far=None):
+    def get_edge_to_explore(self, trials_so_far=None, std_ucb=False):
         '''
             If trials_so_far is not None, uses the standard sqrt(ln(...))
             and multiplies it by the AlphaGo prior.
@@ -134,7 +136,7 @@ class TreeNode:
 
         if INLINE_UCB:
             qs = self.edge_scores / np.maximum(self.edge_visits, self.ones)
-            us = np.sqrt(np.log(self.ones + trials_so_far) / (self.ones + self.edge_visits))
+            us = np.sqrt(self.ones + trials_so_far) / (self.ones + self.edge_visits)
 
             assert len(qs.shape) == 1
             assert len(us.shape) == 1
@@ -143,10 +145,10 @@ class TreeNode:
             best_edge = self.out_edges[best_ind]
         else:
             best_edge = self.out_edges[0]
-            best_ucb = best_edge.get_ucb(trials_so_far)
+            best_ucb = best_edge.get_ucb(trials_so_far, std_ucb=std_ucb)
 
             for edge in self.out_edges[1:]:
-                curr_ucb = edge.get_ucb(trials_so_far)
+                curr_ucb = edge.get_ucb(trials_so_far, std_ucb=std_ucb)
                 if curr_ucb > best_ucb:
                     best_edge = edge
                     best_ucb = curr_ucb
@@ -197,7 +199,7 @@ class TreeNode:
         return str(self)
 
 class TreeEdge:
-    UCB_FACTOR = 20
+    UCB_FACTOR = 10
 
     def __init__(self, uci, prior, from_node, to_node, update_callback=None):
         self.uci = uci
@@ -210,12 +212,12 @@ class TreeEdge:
 
         self.update_callback = update_callback
 
-    def get_ucb(self, trials_so_far=None):
+    def get_ucb(self, trials_so_far, std_ucb=False):
         q = self.get_action_value()
 
         # Use default AlphaGo
-        if trials_so_far is None:
-            u = 1 / (1 + self.n_visits)
+        if not std_ucb:
+            u = np.sqrt(1 + trials_so_far) / (1 + self.n_visits)
         else: # Or standard UCB
             u = np.sqrt(np.log(1 + trials_so_far) / (1 + self.n_visits))
         u *= TreeEdge.UCB_FACTOR * self.prior
