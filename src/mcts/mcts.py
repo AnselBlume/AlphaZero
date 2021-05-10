@@ -50,14 +50,17 @@ if USE_CPP_ROLLOUT:
 # https://www.youtube.com/watch?v=UXW2yZndl7U
 
 class MCTSEvaluator:
-    def __init__(self, root_fen, prior_func_builder, subtree=None):
+    def __init__(self, root_fen, prior_func_builder=None, network_evaluator=None, subtree=None):
+        assert prior_func_builder is not None or network_evaluator is not None
+
         # TODO take in fen history of root_fen to pass into prior_func_builder
         self.root_fen = root_fen
         self.curr_player = chess.Board(root_fen).turn # For terminal state eval
         self.prior_func_builder = prior_func_builder
+        self.network_evaluator = network_evaluator
         self.subtree = subtree # Whether to initialize the MCTS tree to this tree
 
-    def mcts(self, std_ucb=False, max_trials=500, max_time_s=float('inf')):
+    def mcts(self, std_ucb=False, max_trials=500, max_time_s=float('inf'), use_rollouts=False):
         '''
             max_time_s < 0 indicates all the time necessary to finish
             max_trials.
@@ -76,7 +79,7 @@ class MCTSEvaluator:
 
         i = 0
         while i < max_trials and not out_of_time:
-            self.evaluate(root, fen_to_node, i, std_ucb=std_ucb)
+            self.evaluate(root, fen_to_node, i, std_ucb=std_ucb, use_rollouts=use_rollouts)
             i += 1
 
             if max_time_s > 0 and time() - start_time > max_time_s:
@@ -87,7 +90,7 @@ class MCTSEvaluator:
 
         return root
 
-    def evaluate(self, root, fen_to_node, trials_so_far, std_ucb=False):
+    def evaluate(self, root, fen_to_node, trials_so_far, std_ucb=False, use_rollouts=False):
         # Path will contain nodes and edges so we can update state values
         # though we technically only care about action values
         path = [root]
@@ -106,7 +109,7 @@ class MCTSEvaluator:
         if curr.is_terminal():
             value = self.get_terminal_value(curr)
         else:
-            if curr.n_visits > 0:
+            if curr.n_visits > 0 or not use_rollouts:
                 curr.expand(self.prior_func_builder(fen_path))
 
                 edge = curr.get_edge_to_explore(trials_so_far)
@@ -116,10 +119,13 @@ class MCTSEvaluator:
                 path.append(curr)
                 fen_path.append(curr)
 
-            if USE_CPP_ROLLOUT:
-                value = rollout_lib.rollout(curr.fen.encode('ascii'))
+            if use_rollouts:
+                if USE_CPP_ROLLOUT:
+                    value = rollout_lib.rollout(curr.fen.encode('ascii'))
+                else:
+                    value = self.rollout_fast(curr)
             else:
-                value = self.rollout_fast(curr)
+                value = self.network_evaluator(fen_path)
 
         self.backup(path, value)
 

@@ -17,7 +17,7 @@ START_FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'
 MAX_TURNS = float('inf')
 
 class GameRunner:
-    def __init__(self, T, temp=1, temp_divisor=1.013, std_ucb=False, max_trials=1000, max_time_s=10,
+    def __init__(self, T, temp=1, temp_divisor=1.005, std_ucb=False, max_trials=1000, max_time_s=10,
                  device='cpu'):
         self.T = T
         self.temp = temp
@@ -28,7 +28,7 @@ class GameRunner:
         self.state_encoder = StateEncoder(T)
         self.device = device
 
-    def play_game(self, network, start_fen=START_FEN):
+    def play_game(self, network, start_fen=START_FEN, use_rollouts=False):
         network.eval()
         board = chess.Board(start_fen)
         fen_history = [] # Could use a deque here
@@ -38,7 +38,14 @@ class GameRunner:
         turn = 0
         logger.info(f'Starting FEN: {board.fen()}')
         while board.outcome() is None:
-            mcts_dist, subtree = self.play_turn(board, network, fen_history[-self.T:], subtree=subtree, turn=turn)
+            mcts_dist, subtree = self.play_turn(
+                board,
+                network,
+                fen_history[-self.T:],
+                subtree=subtree,
+                turn=turn,
+                use_rollouts=use_rollouts
+            )
             mcts_dists.append(mcts_dist)
             fen_history.append(board.fen())
 
@@ -48,6 +55,23 @@ class GameRunner:
             if turn >= MAX_TURNS:
                 break
 
+        # If we're not using rollouts, we need to set the values to the actual winner as opposed
+        # to the estimated rollout values
+        if not use_rollouts: # Set the values to 1 for the winning states, -1 for losing
+            winner = board.outcome().winner
+
+            if winner is None: # Draw
+                white_val = 0
+                black_val = 0
+            else:
+                white_val = 1 if winner == chess.WHITE else -1
+                black_val = 1 if winner == chess.BLACK else -1
+
+            for i in range(0, len(mcts_dists), 2):
+                mcts_dists[i].value = white_val
+            for i in range(1, len(mcts_dists), 2):
+                mcts_dists[i].value = black_val
+
         # Build mcts_dist_histories
         if self.T > len(mcts_dists):
             return board, [mcts_dists]
@@ -56,7 +80,7 @@ class GameRunner:
 
         return board, mcts_dist_histories
 
-    def play_turn(self, board, network, fen_history, subtree=None, turn=1):
+    def play_turn(self, board, network, fen_history, subtree=None, turn=1, use_rollouts=False):
         '''
             fen_history is a list of FEN strings detailing the history up until
             and not including the current state.
@@ -64,11 +88,20 @@ class GameRunner:
             board is a chess.Board describing the current state.
         '''
         prior_func_builder = self._get_prior_func_builder(network, fen_history)
-        mcts_evaluator = MCTSEvaluator(board.fen(), prior_func_builder, subtree=subtree)
+        network_evaluator = self._get_network_evaluator(network, fen_history)
+
+        mcts_evaluator = MCTSEvaluator(
+            board.fen(),
+            prior_func_builder=prior_func_builder,
+            network_evaluator=network_evaluator,
+            subtree=subtree
+        )
+
         root = mcts_evaluator.mcts(
             std_ucb=self.std_ucb,
             max_trials=self.max_trials,
-            max_time_s=self.max_time_s
+            max_time_s=self.max_time_s,
+            use_rollouts=use_rollouts
         )
         effective_temp = self.temp / self.temp_divisor ** turn
         sampled_move, sampled_ind = self._sample_move(root, effective_temp)
@@ -121,6 +154,29 @@ class GameRunner:
             return prior_func
 
         return prior_func_builder
+
+    def _get_network_evaluator(self, network, fen_history):
+        '''
+            Same parameters as _get_prior_func_builder. Runs the network in the same way,
+            just doesn't care about the policy returned by the network.
+        '''
+        def network_evaluator(fens):
+            '''
+                fens is a list of FEN strings detailing the path from the root
+                of the MCTS tree up to and INCLUDING the current state from which
+                a move will be selected.
+            '''
+            # Build the network's masked policy
+            fens = fen_history + fens # Combine the history before the root of mcts and after
+            boards = (chess.Board(fen) for fen in fens[-self.T:])
+            curr_state = self.state_encoder.encode_state_with_history(boards)
+            with torch.no_grad():
+                curr_state = curr_state.unsqueeze(0).to(self.device)
+                value, _ = network(curr_state)
+
+            return value
+
+        return network_evaluator
 
 if __name__ == '__main__':
     pass
