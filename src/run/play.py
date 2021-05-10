@@ -67,6 +67,9 @@ class GameRunner:
                 white_val = 1 if winner == chess.WHITE else -1
                 black_val = 1 if winner == chess.BLACK else -1
 
+            white_val = float(white_val)
+            black_val = float(black_val)
+
             for i in range(0, len(mcts_dists), 2):
                 mcts_dists[i].value = white_val
             for i in range(1, len(mcts_dists), 2):
@@ -101,6 +104,7 @@ class GameRunner:
             max_time_s=self.max_time_s,
             use_rollouts=use_rollouts
         )
+
         effective_temp = self.temp / self.temp_divisor ** turn
         sampled_move, sampled_ind = self._sample_move(root, effective_temp)
         logger.debug(f'Sampled move: {sampled_move}')
@@ -152,29 +156,6 @@ class GameRunner:
             return value, net_policy, prior_func
 
         return prior_func_builder
-
-    def _get_network_evaluator(self, network, fen_history):
-        '''
-            Same parameters as _get_prior_func_builder. Runs the network in the same way,
-            just doesn't care about the policy returned by the network.
-        '''
-        def network_evaluator(fens):
-            '''
-                fens is a list of FEN strings detailing the path from the root
-                of the MCTS tree up to and INCLUDING the current state from which
-                a move will be selected.
-            '''
-            # Build the network's masked policy
-            fens = fen_history + fens # Combine the history before the root of mcts and after
-            boards = (chess.Board(fen) for fen in fens[-self.T:])
-            curr_state = self.state_encoder.encode_state_with_history(boards)
-            with torch.no_grad():
-                curr_state = curr_state.unsqueeze(0).to(self.device)
-                value, _ = network(curr_state)
-
-            return value
-
-        return network_evaluator
 
 if __name__ == '__main__':
     pass

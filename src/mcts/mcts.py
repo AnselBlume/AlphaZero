@@ -69,7 +69,8 @@ class MCTSEvaluator:
             root.expand(self.prior_func_builder([self.root_fen])[2])
         else:
             root = self.subtree
-            assert root.was_expanded()
+            if not root.was_expanded():
+                root.expand(self.prior_func_builder([self.root_fen])[2])
 
         start_time = time()
         out_of_time = False
