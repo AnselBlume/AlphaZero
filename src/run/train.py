@@ -24,7 +24,7 @@ def train(T, device='cpu', num_games=10, chkpt_path=None, start_fen=START_FEN,
           max_trials=1000, max_time_s=30, network_temp=2):
     net, optimizer, games_trained, replay_mem = load_state(T, chkpt_path, device, network_temp=network_temp)
 
-    wandb.init(project='alphazero', entity='blume5', reinit=True)
+    #wandb.init(project='alphazero', entity='blume5', reinit=True)
     #wandb.watch(net, log_freq=1, log='all') # Slows down MCTS evaluation significantly (by approx a factor of 10)
 
     game_runner = GameRunner(T, device=device, max_trials=max_trials, max_time_s=max_time_s)
@@ -49,10 +49,10 @@ def train(T, device='cpu', num_games=10, chkpt_path=None, start_fen=START_FEN,
         optimizer.step()
 
         games_trained += 1
-        wandb.log({
-            'Loss' : loss.item(),
-            'Games trained' : games_trained
-        })
+        # wandb.log({
+        #     'Loss' : loss.item(),
+        #     'Games trained' : games_trained
+        # })
         logger.info(f'Saving updated network')
         save_state(net, optimizer, games_trained, replay_mem, LATEST_CHKPT_PATH)
 

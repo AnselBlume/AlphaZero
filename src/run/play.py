@@ -80,7 +80,7 @@ class GameRunner:
 
         return board, mcts_dist_histories
 
-    def play_turn(self, board, network, fen_history, subtree=None, turn=1, use_rollouts=False):
+    def play_turn(self, board, network, fen_history, subtree=None, turn=1, use_rollouts=True):
         '''
             fen_history is a list of FEN strings detailing the history up until
             and not including the current state.
@@ -88,12 +88,10 @@ class GameRunner:
             board is a chess.Board describing the current state.
         '''
         prior_func_builder = self._get_prior_func_builder(network, fen_history)
-        network_evaluator = self._get_network_evaluator(network, fen_history)
 
         mcts_evaluator = MCTSEvaluator(
             board.fen(),
             prior_func_builder=prior_func_builder,
-            network_evaluator=network_evaluator,
             subtree=subtree
         )
 
@@ -141,7 +139,7 @@ class GameRunner:
             curr_state = self.state_encoder.encode_state_with_history(boards)
             with torch.no_grad():
                 curr_state = curr_state.unsqueeze(0).to(self.device)
-                _, net_log_probs = network(curr_state)
+                value, net_log_probs = network(curr_state)
 
             net_policy = net_log_probs.exp().squeeze()
             mask_invalid_moves(net_policy, chess.Board(fens[-1]), device=self.device)
@@ -151,7 +149,7 @@ class GameRunner:
                 index = square_move_to_index(move.from_square, move.to_square, move.promotion)
                 return net_policy[row, col, index]
 
-            return prior_func
+            return value, net_policy, prior_func
 
         return prior_func_builder
 

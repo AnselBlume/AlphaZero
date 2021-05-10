@@ -50,14 +50,11 @@ if USE_CPP_ROLLOUT:
 # https://www.youtube.com/watch?v=UXW2yZndl7U
 
 class MCTSEvaluator:
-    def __init__(self, root_fen, prior_func_builder=None, network_evaluator=None, subtree=None):
-        assert prior_func_builder is not None or network_evaluator is not None
-
+    def __init__(self, root_fen, prior_func_builder=None, subtree=None):
         # TODO take in fen history of root_fen to pass into prior_func_builder
         self.root_fen = root_fen
         self.curr_player = chess.Board(root_fen).turn # For terminal state eval
         self.prior_func_builder = prior_func_builder
-        self.network_evaluator = network_evaluator
         self.subtree = subtree # Whether to initialize the MCTS tree to this tree
 
     def mcts(self, std_ucb=False, max_trials=500, max_time_s=float('inf'), use_rollouts=False):
@@ -69,7 +66,7 @@ class MCTSEvaluator:
         fen_to_node = {} # Index of all TreeNodes
         if self.subtree is None:
             root = TreeNode(self.root_fen, fen_to_node)
-            root.expand(self.prior_func_builder([self.root_fen]))
+            root.expand(self.prior_func_builder([self.root_fen])[2])
         else:
             root = self.subtree
             assert root.was_expanded()
@@ -109,23 +106,25 @@ class MCTSEvaluator:
         if curr.is_terminal():
             value = self.get_terminal_value(curr)
         else:
-            if curr.n_visits > 0 or not use_rollouts:
-                curr.expand(self.prior_func_builder(fen_path))
-
-                edge = curr.get_edge_to_explore(trials_so_far)
-                curr = edge.to_node
-
-                path.append(edge)
-                path.append(curr)
-                fen_path.append(curr)
+            value, _, prior_func = self.prior_func_builder(fen_path)
 
             if use_rollouts:
+                if curr.n_visits > 0:
+                    curr.expand(prior_func)
+
+                    edge = curr.get_edge_to_explore(trials_so_far)
+                    curr = edge.to_node
+
+                    path.append(edge)
+                    path.append(curr)
+                    fen_path.append(curr.fen)
+
                 if USE_CPP_ROLLOUT:
                     value = rollout_lib.rollout(curr.fen.encode('ascii'))
                 else:
                     value = self.rollout_fast(curr)
             else:
-                value = self.network_evaluator(fen_path)
+                curr.expand(prior_func)
 
         self.backup(path, value)
 
