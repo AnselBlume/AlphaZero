@@ -45,7 +45,7 @@ class StateEncoder:
             Returns the input tensor to be processed by AlphaZero.
         '''
         T = self.T
-        state = torch.zeros(M*T+L, N, N)
+        state = self.get_empty_state()
 
         # Encode history, dropping the oldest state
         state[:M*(T-1), ...] = prev_state[M:M*T,...]
@@ -57,23 +57,29 @@ class StateEncoder:
             row, col = square_to_n_n(square)
             state[t_offset + piece_ind, row, col] = 1
 
-        # TODO Potentially encode repeat count for both players
+        # Encode repeat count for this position
+        # Why do we have two planes for repetition count when other counts only get one?
+        # Since the API only allows for a certain repetition count be checked, just encode binary 0, 1 as to
+        # whether the state has been repeated four times (since checking is_repetition(1), 2, 3, 4 would
+        # be extremely expensive
+        state[t_offset + 12] = board.is_repetition(4)
 
         # Encode current player color
-        state[M*T, ...] += board.turn
+        state[M*T, ...] = board.turn
 
         # Encode total move count
-        state[M*T + 1, ...] += len(board.move_stack)
+        state[M*T + 1, ...] = len(board.move_stack)
 
         # Encode player castling
-        state[M*T + 2, ...] += board.has_queenside_castling_rights(board.turn)
-        state[M*T + 3, ...] += board.has_kingside_castling_rights(board.turn)
+        state[M*T + 2, ...] = board.has_queenside_castling_rights(board.turn)
+        state[M*T + 3, ...] = board.has_kingside_castling_rights(board.turn)
 
         # Encode opponent castling
-        state[M*T + 4, ...] += board.has_queenside_castling_rights(not board.turn)
-        state[M*T + 5, ...] += board.has_kingside_castling_rights(not board.turn)
+        state[M*T + 4, ...] = board.has_queenside_castling_rights(not board.turn)
+        state[M*T + 5, ...] = board.has_kingside_castling_rights(not board.turn)
 
-        # TODO Potentially encode progress count
+        # Encode progress count as number of halfmoves; game ends when halfmoves == 175
+        state[M*T + 6, ...] = board.halfmove_clock
 
         return state
 

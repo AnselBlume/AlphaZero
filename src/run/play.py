@@ -37,7 +37,9 @@ class GameRunner:
         subtree = None # The previous MCTS subtree from which MCTS will be started
         turn = 0
         logger.info(f'Starting FEN: {board.fen()}')
-        while board.outcome() is None:
+
+        outcome = board.outcome()
+        while outcome is None:
             mcts_dist, subtree = self.play_turn(
                 board,
                 network,
@@ -54,15 +56,23 @@ class GameRunner:
 
             if turn >= MAX_TURNS:
                 break
+            outcome = board.outcome()
 
         # If we're not using rollouts, we need to set the values to the actual winner as opposed
         # to the estimated rollout values
         if not use_rollouts: # Set the values to 1 for the winning states, -1 for losing
-            winner = board.outcome().winner
+            winner = outcome.winner
 
             if winner is None: # Draw
-                white_val = 0
-                black_val = 0
+                # Discourage seventy five move no progress and fivefold repetition draws
+                termination = outcome.termination
+                if termination == chess.Termination.SEVENTYFIVE_MOVES \
+                   or termination == chess.Termination.FIVEFOLD_REPETITION:
+                    white_val = -5
+                    black_val = -5
+                else:
+                    white_val = 0
+                    black_val = 0
             else:
                 white_val = 1 if winner == chess.WHITE else -1
                 black_val = 1 if winner == chess.BLACK else -1
