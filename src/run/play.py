@@ -123,7 +123,7 @@ class GameRunner:
         return MCTSDist(root, effective_temp), root.out_edges[sampled_ind].to_node
 
     def _sample_move(self, root, effective_temp):
-        visits = torch.tensor([edge.n_visits for edge in root.out_edges])
+        visits = torch.tensor([edge.n_visits for edge in root.out_edges]).float()
 
         # In the same way as in MCTSPolicyEncoder, perform softmax over visits
         # as opposed to this harder version used in the original paper

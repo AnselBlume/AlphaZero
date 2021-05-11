@@ -28,8 +28,8 @@ def top_net_moves(fen, network, T=8, temp=2, k=5, device='cpu'):
 
     return val, list(zip(top_ucis, top_probs))
 
-def top_mcts_moves(fen, network, T=8, temp=2, k=5, device='cpu',
-                   max_trials=1000, max_time_s=10):
+def top_mcts_moves(fen, network, T=8, temp=1, k=5, device='cpu',
+                   max_trials=1000, max_time_s=5):
     # Build inputs for MCTS
     state_encoder = StateEncoder(T)
 
@@ -45,7 +45,7 @@ def top_mcts_moves(fen, network, T=8, temp=2, k=5, device='cpu',
         curr_state = state_encoder.encode_state_with_history(boards)
         with torch.no_grad():
             curr_state = curr_state.unsqueeze(0).to(device)
-            _, net_log_probs = network(curr_state)
+            value, net_log_probs = network(curr_state)
 
         net_policy = net_log_probs.exp().squeeze()
         mask_invalid_moves(net_policy, chess.Board(fens[-1]), device=device)
@@ -55,7 +55,7 @@ def top_mcts_moves(fen, network, T=8, temp=2, k=5, device='cpu',
             index = square_move_to_index(move.from_square, move.to_square, move.promotion)
             return net_policy[row, col, index]
 
-        return prior_func
+        return value, net_policy, prior_func
 
     # Run MCTS
     mcts_evaluator = MCTSEvaluator(fen, prior_func_builder)
@@ -63,8 +63,8 @@ def top_mcts_moves(fen, network, T=8, temp=2, k=5, device='cpu',
 
     # Get move distribution; computation analogous to GameRunner._sample_move
     # All moves are legal so no need to remove probability 0 moves like in top_net_moves
-    visits = torch.tensor([edge.n_visits for edge in root.out_edges])
-    visits = F.softmax(visits / temp, dim=0)
+    visits = torch.tensor([edge.n_visits for edge in root.out_edges]).float()
+    visits /= visits.sum()
 
     top_probs, top_indices = torch.topk(visits, k)
     top_probs = (top_prob.item() for top_prob in top_probs)

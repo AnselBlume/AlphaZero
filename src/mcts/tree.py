@@ -1,5 +1,6 @@
 import chess
 import numpy as np
+from numpy.random import dirichlet
 import logging
 
 logger = logging.getLogger(__name__)
@@ -65,7 +66,12 @@ class TreeNode:
 
         # For each action, create a child node
         board = chess.Board(self.fen)
-        for i, move in enumerate(board.legal_moves):
+        legal_moves = list(board.legal_moves)
+
+        # Dirichlet noise with concentration .3 as specified in AlphaZero
+        noise = dirichlet(np.zeros(len(legal_moves)) + .3)
+
+        for i, move in enumerate(legal_moves):
             # Compute the next state from the move
             board.push(move)
             child_fen = board.fen()
@@ -78,7 +84,7 @@ class TreeNode:
                 child_state = TreeNode(child_fen, self.fen_to_node, is_rollout=is_rollout)
 
             # Add an edge to the new state from this node
-            prior = prior_func(move)
+            prior = .75 * prior_func(move) + .25 * noise[i] # Add Dirichlet noise with mixing as in AlphaGo Zero
             out_edge = TreeEdge(
                 move.uci(),
                 prior,
