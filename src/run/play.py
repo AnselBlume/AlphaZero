@@ -64,15 +64,8 @@ class GameRunner:
             winner = outcome.winner
 
             if winner is None: # Draw
-                # Discourage seventy five move no progress and fivefold repetition draws
-                termination = outcome.termination
-                if termination == chess.Termination.SEVENTYFIVE_MOVES \
-                   or termination == chess.Termination.FIVEFOLD_REPETITION:
-                    white_val = -5
-                    black_val = -5
-                else:
-                    white_val = 0
-                    black_val = 0
+                white_val = 0
+                black_val = 0
             else:
                 white_val = 1 if winner == chess.WHITE else -1
                 black_val = 1 if winner == chess.BLACK else -1

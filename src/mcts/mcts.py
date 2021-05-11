@@ -185,13 +185,8 @@ class MCTSEvaluator:
     def get_terminal_value(self, terminal):
         # This should match the scoring in play.py's play_game
         winner = terminal.outcome.winner
-        termination = terminal.outcome.termination
 
         if winner is None: # Draw
-            # Discourage draw by seventy five no progress or fivefold repetition
-            if termination == chess.Termination.SEVENTYFIVE_MOVES \
-                   or termination == chess.Termination.FIVEFOLD_REPETITION:
-                return -5
             return 0
 
         return 1 if self.curr_player == winner else -1
