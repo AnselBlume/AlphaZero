@@ -15,7 +15,7 @@ class ReplayMemory:
 
         self.memory.append(mcts_dist_histories)
 
-    def sample(self, num_to_sample=50):
+    def sample(self, num_to_sample=30):
         '''
             Returns a list of mcts_dist_history lists of length num_to_sample.
         '''
