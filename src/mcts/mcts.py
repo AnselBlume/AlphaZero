@@ -104,7 +104,7 @@ class MCTSEvaluator:
             path.append(curr)
             fen_path.append(curr.fen)
 
-        if curr.is_terminal():
+        if curr.is_terminal() and use_rollouts:
             value = self.get_terminal_value(curr)
         else:
             value, _, prior_func = self.prior_func_builder(fen_path)
@@ -124,7 +124,7 @@ class MCTSEvaluator:
                     value = rollout_lib.rollout(curr.fen.encode('ascii'))
                 else:
                     value = self.rollout_fast(curr)
-            else:
+            elif not curr.is_terminal():
                 curr.expand(prior_func)
 
         self.backup(path, value)
@@ -183,8 +183,15 @@ class MCTSEvaluator:
         return 1 if curr_player == winner else -1
 
     def get_terminal_value(self, terminal):
+        # This should match the scoring in play.py's play_game
         winner = terminal.outcome.winner
-        if winner is None:
+        termination = terminal.outcome.termination
+
+        if winner is None: # Draw
+            # Discourage draw by seventy five no progress or fivefold repetition
+            if termination == chess.Termination.SEVENTYFIVE_MOVES \
+                   or termination == chess.Termination.FIVEFOLD_REPETITION:
+                return -5
             return 0
 
         return 1 if self.curr_player == winner else -1

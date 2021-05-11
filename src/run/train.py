@@ -74,7 +74,7 @@ def save_state(net, optimizer, games_trained, replay_mem, chkpt_path):
 
 def load_state(T, chkpt_path, device, network_temp=2):
     net = Network(T, temp=network_temp).to(device)
-    optimizer = Adam(net.parameters(), lr=1e-4, weight_decay=1e-4)
+    optimizer = Adam(net.parameters(), weight_decay=1e-4)
 
     if chkpt_path is not None and os.path.exists(chkpt_path):
         checkpoint = torch.load(chkpt_path, map_location=torch.device(device))
