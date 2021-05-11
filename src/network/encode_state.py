@@ -59,10 +59,12 @@ class StateEncoder:
 
         # Encode repeat count for this position
         # Why do we have two planes for repetition count when other counts only get one?
-        # Since the API only allows for a certain repetition count be checked, just encode binary 0, 1 as to
-        # whether the state has been repeated four times (since checking is_repetition(1), 2, 3, 4 would
-        # be extremely expensive
-        state[t_offset + 12] = board.is_repetition(4)
+        # This is a very expensive operation due to the API; potentially only encode the number of repeats if it's 4?
+        for i in range(1, 5): # Check for number of repeats in {1,...,4}
+            if board.is_repetition(i):
+                state[t_offset + 12, ...] = i
+            else:
+                break
 
         # Encode current player color
         state[M*T, ...] = board.turn
