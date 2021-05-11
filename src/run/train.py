@@ -8,6 +8,12 @@ from .replay_mem import ReplayMemory
 import os
 import logging
 import wandb
+import multiprocessing as mp
+
+try: # Set Process creation method
+    mp.set_start_method('spawn')
+except RuntimeError:
+    pass
 
 logger = logging.getLogger(__name__)
 
@@ -19,6 +25,76 @@ REPLAY_MEM_KEY = 'replay_mem'
 CHECKPOINT_DIR = 'checkpoints'
 LATEST_CHKPT_PATH = 'latest_chkpt.tar'
 CHKPT_NUM_FMT = 'chkpt_%d.tar'
+
+def _self_play_process(queue, net, device='cpu', max_trials=1000, max_time_s=30, start_fen=START_FEN):
+    T = net.T
+    game_runner = GameRunner(T, device=device, max_trials=max_trials, max_time_s=max_time_s)
+    _, mcts_dist_histories = game_runner.play_game(net, start_fen=start_fen)
+    logger.info(f'Completed self-play game')
+
+    logger.info(f'Adding game data to queue')
+    queue.put(mcts_dist_histories)
+
+def multi_train(T, device='cpu', num_iters=10, games_per_iter=4, chkpt_path=None, start_fen=START_FEN,
+                max_trials=1000, max_time_s=30, network_temp=2):
+    '''
+        Hacky duplicate of train in order to quickly spin up multiprocessing
+    '''
+
+    net, optimizer, games_trained, replay_mem = load_state(T, chkpt_path, device, network_temp=network_temp)
+    replay_mem = ReplayMemory(games_per_iter) # Override normal intialization of load_state
+
+    wandb.init(project='alphazero', entity='blume5', reinit=True)
+
+    for iter_num in range(games_trained + 1, num_iters + games_trained + 1):
+        logger.info(f'Starting to generate games for iteration {iter_num}')
+        queue = mp.Queue(games_per_iter)
+        processes = []
+        for _ in range(games_per_iter):
+            process = mp.Process(
+                target=_self_play_process,
+                args=(
+                    queue,
+                    net,
+                    device,
+                    max_trials,
+                    max_time_s,
+                    start_fen
+                )
+            )
+            process.start()
+            processes.append(process)
+
+        # Collect data from processes
+        for _ in range(games_per_iter):
+            replay_mem.save(queue.get())
+
+        logger.info('Saving replay memory')
+        save_state(net, optimizer, games_trained, replay_mem, LATEST_CHKPT_PATH)
+
+        mcts_loss = MCTSLoss(T, device=device)
+
+        logger.info(f'Performing gradient step')
+        mcts_dist_histories = replay_mem.sample()
+
+        net.train() # game_runner sets the network to eval
+        optimizer.zero_grad()
+        loss = mcts_loss.get_loss(net, mcts_dist_histories)
+        loss.backward()
+        optimizer.step()
+
+        games_trained += 1
+        wandb.log({
+            'Loss' : loss.item(),
+            'Games trained' : games_trained
+        })
+        logger.info(f'Saving updated network')
+        save_state(net, optimizer, games_trained, replay_mem, LATEST_CHKPT_PATH)
+
+        if iter_num == 1 or iter_num % 10 == 0:
+            save_state(net, optimizer, games_trained, replay_mem, CHKPT_NUM_FMT % iter_num)
+
+    return net
 
 def train(T, device='cpu', num_games=10, chkpt_path=None, start_fen=START_FEN,
           max_trials=1000, max_time_s=30, network_temp=2):

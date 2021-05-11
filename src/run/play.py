@@ -3,7 +3,6 @@ from network.encode_state import StateEncoder
 from network.mask_policy import mask_invalid_moves, square_move_to_index
 from network.network import Network
 from network.encode_dist import MCTSDist
-import network.sample_policy
 import chess
 from mcts.mcts import MCTSEvaluator
 from utils import square_to_n_n
@@ -29,7 +28,6 @@ class GameRunner:
         self.device = device
 
     def play_game(self, network, start_fen=START_FEN, use_rollouts=False):
-        network.eval()
         board = chess.Board(start_fen)
         fen_history = [] # Could use a deque here
 
@@ -93,6 +91,7 @@ class GameRunner:
 
             board is a chess.Board describing the current state.
         '''
+        network.eval()
         prior_func_builder = self._get_prior_func_builder(network, fen_history)
 
         mcts_evaluator = MCTSEvaluator(
